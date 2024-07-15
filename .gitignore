@@ -2,19 +2,18 @@
 __pycache__/
 *.py[cod]
 
-# Environment specific
+# Python virtual environment
 .venv
-venv
-.env
-env
 
-# Unittest reports
+# Pytest reports
+htmlcov/
 .coverage*
+coverage.xml
 
 # Logs
 *.log
 
-# PyEnv version selector
+# Local python version information (pyenv/rye)
 .python-version
 
 # Built objects
@@ -22,10 +21,20 @@ env
 dist/
 build/
 
-# IDEs
-# PyCharm
+# Editor generated files
 .idea/
-# VSCode
 .vscode/
-# MacOS
-.DS_Store
+.spyproject/
+.spyderproject/
+.replit
+.neoconf.json
+
+# Folder attributes / configuration files on various platforms
+.DS_STORE
+[Dd]esktop.ini
+.directory
+
+# Environmental, backup and personal files
+.env
+*.bak
+TODO
