@@ -13,8 +13,23 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.0
+  - repo: local
     hooks:
       - id: ruff
+        name: ruff
+        description: Run ruff linter
+        entry: poetry run ruff check --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: local
+    hooks:
       - id: ruff-format
+        name: ruff-format
+        description: Run ruff formatter
+        entry: poetry run ruff format
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
