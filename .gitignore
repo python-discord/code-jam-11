@@ -23,7 +23,8 @@ build/
 
 # Editor generated files
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .spyproject/
 .spyderproject/
 .replit
