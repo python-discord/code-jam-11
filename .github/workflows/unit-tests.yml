@@ -27,7 +27,8 @@ jobs:
       - name: Run pytest
         shell: bash
         run: |
-          poetry run pytest -v
+          # Ignore exit code 5 (no tests found)
+          poetry run pytest -v || ([ $? = 5 ] && exit 0 || exit $?)
 
           python .github/scripts/normalize_coverage.py
           mv .coverage .coverage.${{ matrix.platform }}.${{ matrix.python-version }}
