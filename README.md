@@ -12,7 +12,7 @@ To run the bot, you'll first want to install all of the project's dependencies. 
 [`poetry`](https://python-poetry.org/docs/) package manager. You may need to download poetry if you don't already have
 it.
 
-To install the dependencies, you can run `poetry install` command. If you only want to run the bot and you're not
+To install the dependencies, you can run the `poetry install` command. If you only want to run the bot and you're not
 interested in also developing / contributing, you can also run `poetry install --only-root`, which will skip the
 development dependencies (tools for linting and testing).
 
