@@ -1,12 +1,9 @@
 # ruff: noqa: T201
-import os
-
 import discord
 
+from src.settings import BOT_TOKEN
+
 bot = discord.Bot()
-
-
-BOT_TOKEN = os.environ["BOT_TOKEN"]
 
 
 @bot.event

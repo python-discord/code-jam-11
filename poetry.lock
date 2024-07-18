@@ -130,13 +130,13 @@ tests-no-zope = ["attrs[tests-mypy]", "cloudpickle", "hypothesis", "pympler", "p
 
 [[package]]
 name = "basedpyright"
-version = "1.13.3"
+version = "1.14.0"
 description = "static type checking for Python (but based)"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "basedpyright-1.13.3-py3-none-any.whl", hash = "sha256:3162c5a5f4fc99f9d53d76cbd8e24d31ad4b28b4fb26a58ab8be6e8b634c99a7"},
-    {file = "basedpyright-1.13.3.tar.gz", hash = "sha256:728d7098250db8d18bc4b48df8f93dfd9c79d155c3c99d41256a6caa6a21232e"},
+    {file = "basedpyright-1.14.0-py3-none-any.whl", hash = "sha256:ca29ae9c9dd04d718866b9d3cc737a31f084ce954a9afc9f00eafac9419e0046"},
+    {file = "basedpyright-1.14.0.tar.gz", hash = "sha256:ebbbb44484e269c441d48129bf43619aa8ff54966706e13732cd4412408d1477"},
 ]
 
 [package.dependencies]
@@ -604,13 +604,13 @@ dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments
 
 [[package]]
 name = "pytest-asyncio"
-version = "0.23.7"
+version = "0.23.8"
 description = "Pytest support for asyncio"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytest_asyncio-0.23.7-py3-none-any.whl", hash = "sha256:009b48127fbe44518a547bddd25611551b0e43ccdbf1e67d12479f569832c20b"},
-    {file = "pytest_asyncio-0.23.7.tar.gz", hash = "sha256:5f5c72948f4c49e7db4f29f2521d4031f1c27f86e57b046126654083d4770268"},
+    {file = "pytest_asyncio-0.23.8-py3-none-any.whl", hash = "sha256:50265d892689a5faefb84df80819d1ecef566eb3549cf915dfb33569359d1ce2"},
+    {file = "pytest_asyncio-0.23.8.tar.gz", hash = "sha256:759b10b33a6dc61cce40a8bd5205e302978bbbcc00e279a8b61d9a6a3c82e4d3"},
 ]
 
 [package.dependencies]
@@ -637,6 +637,17 @@ pytest = ">=4.6"
 
 [package.extras]
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "virtualenv"]
+
+[[package]]
+name = "python-decouple"
+version = "3.8"
+description = "Strict separation of settings from code."
+optional = false
+python-versions = "*"
+files = [
+    {file = "python-decouple-3.8.tar.gz", hash = "sha256:ba6e2657d4f376ecc46f77a3a615e058d93ba5e465c01bbe57289bfb7cce680f"},
+    {file = "python_decouple-3.8-py3-none-any.whl", hash = "sha256:d0d45340815b25f4de59c974b855bb38d03151d81b037d9e3f463b0c9f8cbd66"},
+]
 
 [[package]]
 name = "pyyaml"
@@ -850,4 +861,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "b6bcaf2c7727a0371fea42a806a099b9132f51cd16c1789e2fc61eb0f95b5ba7"
+content-hash = "66527397167d509a93f2c6361f80c4cc1d9edcebdfae99fb254bf3ae913ab48d"
