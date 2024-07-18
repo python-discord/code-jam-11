@@ -1,9 +1,15 @@
+import asyncio
+
 import discord
 
 from src.settings import BOT_TOKEN
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
+
+EXTENSIONS = [
+    "src.exts.ping",
+]
 
 bot = discord.Bot()
 
@@ -14,11 +20,18 @@ async def on_ready() -> None:
     log.info(f"{bot.user} is ready and online!")
 
 
-@bot.slash_command()
-async def ping(ctx: discord.ApplicationContext) -> None:
-    """Test out bot's latency."""
-    _ = await ctx.respond(f"Pong! ({(bot.latency * 1000):.2f}ms)")
+async def main() -> None:
+    """Main entrypoint of the application.
+
+    This will load all of the extensions and start the bot.
+    """
+    log.info("Loading extneions...")
+    _ = bot.load_extensions(*EXTENSIONS)
+
+    log.info("Starting the bot...")
+    async with bot:
+        await bot.start(BOT_TOKEN)
 
 
 if __name__ == "__main__":
-    bot.run(BOT_TOKEN)
+    asyncio.run(main())
