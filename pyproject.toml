@@ -11,6 +11,7 @@ packages = [{ include = "src" }]
 python = "^3.12"
 py-cord = "^2.6.0"
 python-decouple = "^3.8"
+coloredlogs = "^15.0.1"
 
 [tool.poetry.group.lint.dependencies]
 ruff = "^0.3.2"
@@ -73,6 +74,10 @@ ignore = [
 
   "SIM102", # use a single if statement instead of nested if statements
   "SIM108", # Use ternary operator {contents} instead of if-else-block
+
+  "G001", # Logging statement uses str.format
+  "G004", # Logging statement uses f-string
+  "G003", # Logging statement uses +
 
   "B904", # Raise without `from` within an `except` clause
 

@@ -1,7 +1,9 @@
-# ruff: noqa: T201
 import discord
 
 from src.settings import BOT_TOKEN
+from src.utils.log import get_logger
+
+log = get_logger(__name__)
 
 bot = discord.Bot()
 
@@ -9,7 +11,7 @@ bot = discord.Bot()
 @bot.event
 async def on_ready() -> None:
     """Function called once the bot is ready and online."""
-    print(f"{bot.user} is ready and online!")
+    log.info(f"{bot.user} is ready and online!")
 
 
 @bot.slash_command()
