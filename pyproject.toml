@@ -2,7 +2,7 @@
 name = "code-jam-2024"
 version = "0.1.0"
 description = "Python Discord's Code Jam 2024, Contemplative Constellations Team Project"
-authors = ["Itsrike <itsdrike@protonmail.com>"]                                           # TODO: Add everyone in the team
+authors = ["Itsrike <itsdrike@protonmail.com>"]
 readme = "README.md"
 license = "MIT"
 packages = [{ include = "src" }]
