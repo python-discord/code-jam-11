@@ -33,7 +33,7 @@ jobs:
     needs: [docker]
     env:
       WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK }}
-    if: github.event == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     steps:
       - name: Trigger Portainer Webhook
         if: env.WEBHOOK != ''
