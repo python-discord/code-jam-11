@@ -1,11 +1,10 @@
-import aiohttp
-from discord import ApplicationContext, Bot, Cog, Embed, slash_command
+from discord import ApplicationContext, Bot, CheckFailure, Cog, Embed, SlashCommand, SlashCommandGroup, slash_command
+from discord.ext.commands import CheckFailure as CommandCheckFailure
 
-from src.utils import mention_command
+from src.utils import get_cat_image_url, mention_command
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
-CAT_URL: str = "https://api.thecatapi.com/v1/images/search"
 
 
 class HelpCog(Cog):
@@ -17,18 +16,31 @@ class HelpCog(Cog):
     @slash_command()
     async def help(self, ctx: ApplicationContext) -> None:
         """Shows help for all available commands."""
-        async with aiohttp.ClientSession() as client, client.get(CAT_URL) as response:
-            response.raise_for_status()
-            data = await response.json()
-            url: str = data[0]["url"]
-
         embed = Embed(
             title="Help command",
-            image=url,
+            image=await get_cat_image_url(),
         )
-        embed.add_field(name=mention_command("ping", self.bot), value="sends a response with pong", inline=False)
-        embed.add_field(name=mention_command("help", self.bot), value="gives a list of available commands for users")
-        embed.add_field(name="", value="")
+        for command in self.bot.commands:
+            try:
+                can_run = await command.can_run(ctx)
+            except (CheckFailure, CommandCheckFailure):
+                can_run = False
+            if not can_run:
+                continue
+            if isinstance(command, SlashCommand):
+                embed.add_field(name=mention_command(command, self.bot), value=command.description, inline=False)
+            if isinstance(command, SlashCommandGroup):
+                embed.add_field(
+                    name=f"{mention_command(command, self.bot)} group",
+                    value=command.description
+                    + "\n\n"
+                    + "\n".join(
+                        f"{mention_command(subcommand, self.bot)}: {subcommand.description}"
+                        for subcommand in command.subcommands
+                    ),
+                    inline=False,
+                )
+            embed.add_field(name="", value="")
         await ctx.respond(embed=embed)
 
 
