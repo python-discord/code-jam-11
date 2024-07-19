@@ -11,6 +11,7 @@ EXTENSIONS = [
     "src.exts.ping",
     "src.exts.error_handler",
     "src.exts.sudo",
+    "src.exts.help",
 ]
 
 intents = discord.Intents().default()
