@@ -38,7 +38,7 @@ jobs:
       - name: Trigger Portainer Webhook
         if: env.WEBHOOK != ''
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.PORTAINER_WEBHOOK }})
+          response=$(curl -s -X POST -o /dev/null -w "%{http_code}" ${{ secrets.PORTAINER_WEBHOOK }})
           if [[ "$response" -lt 200 || "$response" -ge 300 ]]; then
             echo "Webhook trigger failed with response code $response"
             exit 1
