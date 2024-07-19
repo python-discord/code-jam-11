@@ -86,6 +86,7 @@ ignore = [
 
   "B904", # Raise without `from` within an `except` clause
 
+  "UP038",   # Use `X | Y` in `isinstance` call instead of `(X, Y)`
   "PLR2004", # Using unnamed numerical constants
   "PGH003",  # Using specific rule codes in type ignores
   "E731",    # Don't asign a lambda expression, use a def

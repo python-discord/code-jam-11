@@ -9,9 +9,12 @@ log = get_logger(__name__)
 
 EXTENSIONS = [
     "src.exts.ping",
+    "src.exts.error_handler",
 ]
 
-bot = discord.Bot()
+intents = discord.Intents().default()
+intents.message_content = True
+bot = discord.Bot(intents=intents)
 
 
 @bot.event
