@@ -5,5 +5,4 @@
 .gitattributes
 .gitignore
 .pre-commit-config.yaml
-LICENSE.txt
 README.md
