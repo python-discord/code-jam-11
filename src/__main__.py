@@ -26,7 +26,7 @@ async def main() -> None:
     This will load all of the extensions and start the bot.
     """
     log.info("Loading extensions...")
-    _ = bot.load_extensions(*EXTENSIONS)
+    bot.load_extensions(*EXTENSIONS)
 
     log.info("Starting the bot...")
     async with bot:

@@ -161,9 +161,13 @@ disableBytesTypePromotions = true
 reportAny = false
 reportImplicitStringConcatenation = false
 reportUnreachable = "information"
-reportMissingTypeStubs = "information"
+reportMissingTypeStubs = false
 reportUninitializedInstanceVariable = false # until https://github.com/DetachHead/basedpyright/issues/491
 reportMissingParameterType = false          # ruff's flake8-annotations (ANN) already covers this + gives us more control
+
+# Too strict for py-cord codebases
+reportIncompatibleMethodOverride = false
+reportUnusedCallResult = false
 
 # Unknown type reporting rules (too strict for most code-bases)
 reportUnknownArgumentType = false

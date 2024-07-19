@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Any, TYPE_CHECKING, cast
 
-import coloredlogs  # pyright: ignore[reportMissingTypeStubs]
+import coloredlogs
 
 from src.utils.config import get_config
 

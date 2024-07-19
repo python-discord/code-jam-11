@@ -14,7 +14,7 @@ class PingCog(Cog):
     @slash_command()
     async def ping(self, ctx: ApplicationContext) -> None:
         """Test out bot's latency."""
-        _ = await ctx.respond(f"Pong! ({(self.bot.latency * 1000):.2f}ms)")
+        await ctx.respond(f"Pong! ({(self.bot.latency * 1000):.2f}ms)")
 
 
 def setup(bot: Bot) -> None:

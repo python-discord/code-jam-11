@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, NewType, TYPE_CHECKING, TypeVar, cast, overload
 
-from decouple import UndefinedValueError, config  # pyright: ignore[reportMissingTypeStubs]
+from decouple import UndefinedValueError, config
 
 if TYPE_CHECKING:
     from collections.abc import Callable
