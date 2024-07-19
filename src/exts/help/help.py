@@ -9,15 +9,15 @@ CAT_URL: str = "https://api.thecatapi.com/v1/images/search"
 
 
 class HelpCog(Cog):
-    """Cog to verify the bot is working."""
+    """Cog to provide help info for all available bot commands."""
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
     @slash_command()
     async def help(self, ctx: ApplicationContext) -> None:
-        """Help command shows available commands."""
-        async with aiohttp.ClientSession().get(CAT_URL) as response:
+        """Shows help for all available commands."""
+        async with aiohttp.ClientSession() as client, client.get(CAT_URL) as response:
             response.raise_for_status()
             data = await response.json()
             url: str = data[0]["url"]
