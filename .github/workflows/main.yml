@@ -33,9 +33,10 @@ jobs:
     needs: [docker]
     env:
       WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK }}
-    if: env.WEBHOOK != '' && github.event == 'push' && github.ref == 'refs/heads/main'
+    if: github.event == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Trigger Portainer Webhook
+        if: env.WEBHOOK != ''
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.PORTAINER_WEBHOOK }})
           if [[ "$response" -lt 200 || "$response" -ge 300 ]]; then
