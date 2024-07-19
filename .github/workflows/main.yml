@@ -28,6 +28,21 @@ jobs:
       contents: read
       id-token: write
 
+  deploy-portainer:
+    runs-on: ubuntu-latest
+    needs: [docker]
+    env:
+      WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK }}
+    if: env.WEBHOOK != '' && github.event == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger Portainer Webhook
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.PORTAINER_WEBHOOK }})
+          if [[ "$response" -lt 200 || "$response" -ge 300 ]]; then
+            echo "Webhook trigger failed with response code $response"
+            exit 1
+          fi
+
   # Produce a pull request payload artifact with various data about the
   # pull-request event (such as the PR number, title, author, ...).
   # This data is then be picked up by status-embed.yml action.
