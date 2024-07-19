@@ -32,11 +32,13 @@ convenient.
 | Variable name        | Type   | Description                                                                                         |
 | -------------------- | ------ | --------------------------------------------------------------------------------------------------- |
 | `BOT_TOKEN`          | string | Bot token of the discord application (see: [this guide][bot-token-guide] if you don't have one yet) |
+| `TVDB_API_KEY`       | string | API key for TVDB (see [this page][tvdb-api-page] if you don't have one yet)                         |
 | `DEBUG`              | bool   | If `1`, debug logs will be enabled, if `0` only info logs and above will be shown                   |
 | `LOG_FILE`           | path   | If set, also write the logs into given file, otherwise, only print them                             |
 | `TRACE_LEVEL_FILTER` | custom | Configuration for trace level logging, see: [trace logs config section](#trace-logs-config)         |
 
 [bot-token-guide]: https://guide.pycord.dev/getting-started/creating-your-first-bot#creating-the-bot-application
+[tvdb-api-page]: https://www.thetvdb.com/api-information
 
 ### Trace logs config
 
