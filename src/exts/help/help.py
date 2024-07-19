@@ -17,7 +17,7 @@ class HelpCog(Cog):
     @slash_command()
     async def help(self, ctx: ApplicationContext) -> None:
         """Help command shows available commands."""
-        async with aiohttp.ClientSession().get(CAT_URL) as response:
+        async with aiohttp.ClientSession() as client, client.get(CAT_URL) as response:
             response.raise_for_status()
             data = await response.json()
             url: str = data[0]["url"]
