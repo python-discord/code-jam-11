@@ -1,6 +1,6 @@
 FROM python:3.12-slim-bookworm
 
-ENV POETRY_VERSION=1.3.1 \
+ENV POETRY_VERSION=1.8.3 \
   POETRY_HOME="/opt/poetry/home" \
   POETRY_CACHE_DIR="/opt/poetry/cache" \
   POETRY_NO_INTERACTION=1 \
@@ -20,7 +20,7 @@ RUN curl -sSL https://install.python-poetry.org | python
 RUN poetry config installer.max-workers 10
 
 # Install project dependencies
-WORKDIR /scraper
+WORKDIR /app
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --only main --no-interaction --no-ansi -vvv
 
