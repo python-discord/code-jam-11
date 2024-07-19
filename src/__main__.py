@@ -10,6 +10,7 @@ log = get_logger(__name__)
 EXTENSIONS = [
     "src.exts.ping",
     "src.exts.error_handler",
+    "src.exts.sudo",
 ]
 
 intents = discord.Intents().default()
