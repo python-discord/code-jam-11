@@ -3,26 +3,26 @@ from discord import app_commands
 
 from settings import BOT_TOKEN, GUILD_ID
 
-MY_GUILD = discord.Object(id=GUILD_ID)
+TEST_GUILD = discord.Object(id=GUILD_ID)
 
 
-class MyClient(discord.Client):
+class EcoCordClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        self.tree.copy_global_to(guild=MY_GUILD)
-        await self.tree.sync(guild=MY_GUILD)
+        self.tree.copy_global_to(guild=TEST_GUILD)
+        await self.tree.sync(guild=TEST_GUILD)
 
 
-client = MyClient(intents=discord.Intents.all())
+client = EcoCordClient(intents=discord.Intents.default())
 
 
 @client.event
 async def on_ready():
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
-    print('------')
+    print(f"Logged in as {client.user} (ID: {client.user.id})")
+    print("------")
 
 
 @client.event
@@ -41,10 +41,15 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 
 
 @client.tree.context_menu(name='Show Member Messages')
+@client.tree.context_menu(name="Show Member Messages")
 async def show_member_data(interaction: discord.Interaction, member: discord.Member):
-    # TO REMOVE
-    messages = [message.content async for message in interaction.channel.history(limit=100, oldest_first=True) if message.author == member]
-    await interaction.response.send_message(f'Message history of {member.display_name}: {messages}')
+    # TODO: Remove
+    messages = [
+        message.content
+        async for message in interaction.channel.history(limit=100, oldest_first=True)
+        if message.author == member
+    ]
+    await interaction.response.send_message(f"Message history of {member.display_name}: {messages}")
 
 
 client.run(BOT_TOKEN)
