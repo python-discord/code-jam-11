@@ -27,6 +27,7 @@ class HelpCog(Cog):
                 can_run = False
             if not can_run:
                 continue
+
             if isinstance(command, SlashCommand):
                 embed.add_field(name=mention_command(command, self.bot), value=command.description, inline=False)
             if isinstance(command, SlashCommandGroup):
