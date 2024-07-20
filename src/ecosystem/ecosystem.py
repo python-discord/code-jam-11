@@ -1,33 +1,29 @@
 import math
-
 import pygame
 import random
 from .plant import Plant
+from .frog import Frog
 
 
 class Ecosystem:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        # 0 to 1, where 0 is barren and 1 is lush
         self.activity = 0
         self.time = 0
         self.surface = pygame.Surface((width, height))
 
         self.sky_colors = [
-            # Barren gray
-            (200, 200, 200),
-            # Lush blue
-            (135, 206, 235)
+            (200, 200, 200),  # Barren gray
+            (135, 206, 235)  # Lush blue
         ]
         self.ground_colors = [
-            # Barren tan
-            (210, 180, 140),
-            # Lush green
-            (34, 139, 34)
+            (210, 180, 140),  # Barren tan
+            (34, 139, 34)  # Lush green
         ]
 
         self.plants = []
+        self.frogs = []
 
     def update(self, delta):
         self.time += delta
@@ -36,10 +32,19 @@ class Ecosystem:
         for plant in self.plants:
             plant.update(delta, self.activity)
 
+        for frog in self.frogs:
+            frog.update(delta, self.activity)
+
         if random.random() < self.activity * delta:
             self.plants.append(Plant(random.randint(0, self.width), self.height))
 
+        if random.random() < self.activity * delta * 0.5:
+            new_frog = Frog(random.randint(0, self.width), self.height, self.width, self.height)
+            new_frog.spawn()
+            self.frogs.append(new_frog)
+
         self.plants = [plant for plant in self.plants if plant.alive]
+        self.frogs = [frog for frog in self.frogs if frog.alive]
 
     def draw(self):
         sky_color = self.interpolate_color(self.sky_colors[0], self.sky_colors[1], self.activity)
@@ -50,6 +55,9 @@ class Ecosystem:
 
         for plant in self.plants:
             plant.draw(self.surface)
+
+        for frog in self.frogs:
+            frog.draw(self.surface)
 
         return self.surface
 
