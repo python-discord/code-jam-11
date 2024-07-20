@@ -63,7 +63,10 @@ class InfoCog(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    @slash_command()
+    @slash_command(
+        name="search",
+        description="Search for a movie or series.",
+    )
     @option("query", input_type=str, description="The query to search for.")
     @option(
         "type",
@@ -71,9 +74,13 @@ class InfoCog(Cog):
         parameter_name="entity_type",
         description="The type of entity to search for.",
         choices=["movie", "series"],
+        required=False,
     )
-    async def search(self, ctx: ApplicationContext, query: str, entity_type: Literal["movie", "series"]) -> None:
-        """Test out bot's latency."""
+    async def search(
+        self, ctx: ApplicationContext, query: str, entity_type: Literal["movie", "series"] | None = None
+    ) -> None:
+        """Search for a movie or series."""
+        await ctx.defer()
         async with aiohttp.ClientSession() as session:
             client = TvdbClient(session)
             match entity_type:
@@ -81,6 +88,8 @@ class InfoCog(Cog):
                     response = await client.movies.search(query, limit=5)
                 case "series":
                     response = await client.series.search(query, limit=5)
+                case None:
+                    response = await client.search(query, limit=5)
 
         if not response:
             await ctx.respond("No results found.")
