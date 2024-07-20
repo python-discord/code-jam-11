@@ -1,14 +1,15 @@
 import contextlib
+import threading
+import time
+from collections import deque
+from pathlib import Path
+from queue import Queue
 
 # Hide pygame welcome message
 with contextlib.redirect_stdout(None):
     import pygame
 
 import random
-import time
-from collections import deque
-from pathlib import Path
-from queue import Queue
 
 from PIL import Image
 
@@ -187,13 +188,8 @@ class Ecosystem:
 
         return self.surface
 
-    def reset(self):
-        self.activity = 0.5
-        self.elapsed_time = 0
-        self.plants = []
-        self.frogs = []
-        self.snakes = []
-        self.birds = []
+    def interpolate_color(self, color1, color2, t):
+        return tuple(int(c1 + (c2 - c1) * t) for c1, c2 in zip(color1, color2, strict=False))
 
     def spawn_plant(self):
         self.plants.append(Plant(random.randint(0, self.width), self.height * 0.7))
@@ -213,27 +209,21 @@ class Ecosystem:
         new_bird.spawn()
         self.birds.append(new_bird)
 
-    @staticmethod
-    def interpolate_color(color1, color2, t):
-        return tuple(int(a + (b - a) * t) for a, b in zip(color1, color2, strict=False))
+    def reset(self):
+        self.plants.clear()
+        self.frogs.clear()
+        self.snakes.clear()
+        self.birds.clear()
+        self.activity = 1
+        self.elapsed_time = 0
 
     def _generate_gif(self):
-        gif_path = Path(self.gif_dir) / f"ecosystem_{time.time()}.gif"
         frames = [Image.frombytes("RGB", (self.width, self.height), frame) for frame in self.frame_queue]
-
+        gif_path = Path(self.gif_dir) / f"ecosystem_{int(time.time())}.gif"
         frames[0].save(
-            gif_path,
-            save_all=True,
-            append_images=frames[1:],
-            optimize=True,
-            duration=1000,
+            gif_path, save_all=True, append_images=frames[1:], optimize=False, duration=1000 // self.fps, loop=0
         )
-        self.gif_queue.put((gif_path, time.time()))
-
-    def get_latest_gif(self):
-        if self.gif_queue.empty():
-            return None
-        return self.gif_queue.get()
+        self.gif_queue.put((str(gif_path), time.time()))
 
 
 class Button:
@@ -254,103 +244,107 @@ class Button:
         return self.rect.collidepoint(pos)
 
 
-def run_pygame(show_controls=True, generate_gifs=False):
-    pygame.init()
-    width, height = 800, 600
-    screen = pygame.display.set_mode((width, height))
-    pygame.display.set_caption("Ecosystem Visualization")
-    clock = pygame.time.Clock()
+class EcosystemManager:
+    def __init__(self, width=800, height=600, generate_gifs=False):
+        pygame.init()
+        self.ecosystem = Ecosystem(width, height, generate_gifs=generate_gifs)
+        self.running = False
+        self.thread = None
+        self.gif_queue = Queue()
 
-    ecosystem = Ecosystem(width, height, generate_gifs=generate_gifs)
+    def start(self, show_controls=True):
+        if self.thread and self.thread.is_alive():
+            return
 
-    running = True
-    while running:
-        delta = clock.tick(60) / 1000.0
+        self.running = True
+        self.thread = threading.Thread(target=self._run_ecosystem, args=(show_controls,))
+        self.thread.start()
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif show_controls and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                position = pygame.mouse.get_pos()
-                if ecosystem.activity_slider.collidepoint(position):
-                    ecosystem.activity = (position[0] - ecosystem.activity_slider.x) / ecosystem.activity_slider.width
-                elif ecosystem.spawn_plant_button.is_clicked(position):
-                    ecosystem.spawn_plant()
-                elif ecosystem.spawn_frog_button.is_clicked(position):
-                    ecosystem.spawn_frog()
-                elif ecosystem.spawn_snake_button.is_clicked(position):
-                    ecosystem.spawn_snake()
-                elif ecosystem.spawn_bird_button.is_clicked(position):
-                    ecosystem.spawn_bird()
-                elif ecosystem.reset_button.is_clicked(position):
-                    ecosystem.reset()
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join()
 
-        ecosystem.update(delta)
-        screen.blit(ecosystem.draw(), (0, 0))
+    def _run_ecosystem(self, show_controls):
+        pygame.init()
+        screen = pygame.display.set_mode((self.ecosystem.width, self.ecosystem.height))
+        pygame.display.set_caption("Ecosystem Visualization")
+        clock = pygame.time.Clock()
 
-        if show_controls:
-            pygame.draw.rect(screen, (200, 200, 200), ecosystem.activity_slider)
-            pygame.draw.rect(
-                screen,
-                (0, 255, 0),
-                (
-                    ecosystem.activity_slider.x,
-                    ecosystem.activity_slider.y,
-                    ecosystem.activity_slider.width * ecosystem.activity,
-                    ecosystem.activity_slider.height,
-                ),
-            )
+        while self.running:
+            delta = clock.tick(60) / 1000.0
 
-            ecosystem.spawn_plant_button.draw(screen)
-            ecosystem.spawn_frog_button.draw(screen)
-            ecosystem.spawn_snake_button.draw(screen)
-            ecosystem.spawn_bird_button.draw(screen)
-            ecosystem.reset_button.draw(screen)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                elif show_controls and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    self._handle_mouse_click(event.pos)
 
-            activity_text = ecosystem.font.render(f"Activity: {ecosystem.activity:.2f}", True, (0, 0, 0))
-            screen.blit(activity_text, (20, 90))
+            self.ecosystem.update(delta)
+            screen.blit(self.ecosystem.draw(), (0, 0))
 
-            plants_text = ecosystem.font.render(f"Plants: {len(ecosystem.plants)}", True, (0, 0, 0))
-            screen.blit(plants_text, (20, 110))
+            if show_controls:
+                self._draw_controls(screen)
 
-            frogs_text = ecosystem.font.render(f"Frogs: {len(ecosystem.frogs)}", True, (0, 0, 0))
-            screen.blit(frogs_text, (20, 130))
+            pygame.display.flip()
 
-            snakes_text = ecosystem.font.render(f"Snakes: {len(ecosystem.snakes)}", True, (0, 0, 0))
-            screen.blit(snakes_text, (20, 150))
+            if self.ecosystem.generate_gifs and not self.ecosystem.gif_queue.empty():
+                gif_path, timestamp = self.ecosystem.gif_queue.get()
+                self.gif_queue.put((gif_path, timestamp))
 
-            birds_text = ecosystem.font.render(f"Birds: {len(ecosystem.birds)}", True, (0, 0, 0))
-            screen.blit(birds_text, (20, 170))
+        pygame.quit()
 
-        pygame.display.flip()
+    def _handle_mouse_click(self, position):
+        if self.ecosystem.activity_slider.collidepoint(position):
+            self.ecosystem.activity = (
+                position[0] - self.ecosystem.activity_slider.x
+            ) / self.ecosystem.activity_slider.width
+        elif self.ecosystem.spawn_plant_button.is_clicked(position):
+            self.ecosystem.spawn_plant()
+        elif self.ecosystem.spawn_frog_button.is_clicked(position):
+            self.ecosystem.spawn_frog()
+        elif self.ecosystem.spawn_snake_button.is_clicked(position):
+            self.ecosystem.spawn_snake()
+        elif self.ecosystem.spawn_bird_button.is_clicked(position):
+            self.ecosystem.spawn_bird()
+        elif self.ecosystem.reset_button.is_clicked(position):
+            self.ecosystem.reset()
 
-        if generate_gifs:
-            latest_gif = ecosystem.get_latest_gif()
-            if latest_gif:
-                gif_path, timestamp = latest_gif
-                print(f"New GIF generated at {timestamp}: {gif_path}")
+    def _draw_controls(self, screen):
+        pygame.draw.rect(screen, (200, 200, 200), self.ecosystem.activity_slider)
+        pygame.draw.rect(
+            screen,
+            (0, 255, 0),
+            (
+                self.ecosystem.activity_slider.x,
+                self.ecosystem.activity_slider.y,
+                self.ecosystem.activity_slider.width * self.ecosystem.activity,
+                self.ecosystem.activity_slider.height,
+            ),
+        )
 
-    pygame.quit()
+        self.ecosystem.spawn_plant_button.draw(screen)
+        self.ecosystem.spawn_frog_button.draw(screen)
+        self.ecosystem.spawn_snake_button.draw(screen)
+        self.ecosystem.spawn_bird_button.draw(screen)
+        self.ecosystem.reset_button.draw(screen)
 
+        activity_text = self.ecosystem.font.render(f"Activity: {self.ecosystem.activity:.2f}", True, (0, 0, 0))
+        screen.blit(activity_text, (20, 90))
 
-def run_gif_generator(duration=None):
-    pygame.init()
-    width, height = 800, 600
-    ecosystem = Ecosystem(width, height, generate_gifs=True)
-    clock = pygame.time.Clock()
+        plants_text = self.ecosystem.font.render(f"Plants: {len(self.ecosystem.plants)}", True, (0, 0, 0))
+        screen.blit(plants_text, (20, 110))
 
-    start_time = time.time()
-    running = True
-    while running:
-        delta = clock.tick(60) / 1000.0
-        ecosystem.update(delta)
-        ecosystem.draw()
+        frogs_text = self.ecosystem.font.render(f"Frogs: {len(self.ecosystem.frogs)}", True, (0, 0, 0))
+        screen.blit(frogs_text, (20, 130))
 
-        if duration and time.time() - start_time > duration:
-            running = False
+        snakes_text = self.ecosystem.font.render(f"Snakes: {len(self.ecosystem.snakes)}", True, (0, 0, 0))
+        screen.blit(snakes_text, (20, 150))
 
-        latest_gif = ecosystem.get_latest_gif()
-        if latest_gif:
-            yield latest_gif
+        birds_text = self.ecosystem.font.render(f"Birds: {len(self.ecosystem.birds)}", True, (0, 0, 0))
+        screen.blit(birds_text, (20, 170))
 
-    pygame.quit()
+    def get_latest_gif(self):
+        if not self.gif_queue.empty():
+            return self.gif_queue.get()
+        return None
