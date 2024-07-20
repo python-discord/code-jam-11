@@ -5,15 +5,17 @@ with contextlib.redirect_stdout(None):
     import pygame
 
 import random
-import os
 import time
 from collections import deque
+from pathlib import Path
 from queue import Queue
+
 from PIL import Image
-from .plant import Plant
-from .frog import Frog
-from .snake import Snake
+
 from .bird import Bird
+from .frog import Frog
+from .plant import Plant
+from .snake import Snake
 
 
 class Ecosystem:
@@ -26,11 +28,11 @@ class Ecosystem:
 
         self.sky_colors = [
             (200, 200, 200),  # Barren gray
-            (135, 206, 235)  # Lush blue
+            (135, 206, 235),  # Lush blue
         ]
         self.ground_colors = [
             (210, 180, 140),  # Barren tan
-            (34, 139, 34)  # Lush green
+            (34, 139, 34),  # Lush green
         ]
 
         self.plants = []
@@ -39,6 +41,12 @@ class Ecosystem:
         self.birds = []
 
         self.font = pygame.font.Font(None, 24)
+        self.activity_slider = None
+        self.spawn_plant_button = None
+        self.spawn_frog_button = None
+        self.spawn_snake_button = None
+        self.spawn_bird_button = None
+        self.reset_button = None
         self.setup_ui()
 
         # GIF generation attributes
@@ -50,7 +58,7 @@ class Ecosystem:
             self.frame_queue = deque(maxlen=fps * gif_duration)
             self.gif_queue = Queue()
             self.gif_dir = "ecosystem_gifs"
-            os.makedirs(self.gif_dir, exist_ok=True)
+            Path(self.gif_dir).mkdir(exist_ok=True)
             self.last_gif_time = 0
 
     def setup_ui(self):
@@ -64,20 +72,60 @@ class Ecosystem:
 
         button_y = top_margin + self.activity_slider.height + button_spacing
 
-        self.spawn_plant_button = Button(left_margin, button_y, button_width, button_height, "Spawn Plant", (0, 255, 0),
-                                         (0, 0, 0), self.font)
+        self.spawn_plant_button = Button(
+            left_margin,
+            button_y,
+            button_width,
+            button_height,
+            "Spawn Plant",
+            (0, 255, 0),
+            (0, 0, 0),
+            self.font,
+        )
 
-        self.spawn_frog_button = Button(left_margin + button_width + button_spacing, button_y, button_width,
-                                        button_height, "Spawn Frog", (0, 0, 255), (255, 255, 255), self.font)
+        self.spawn_frog_button = Button(
+            left_margin + button_width + button_spacing,
+            button_y,
+            button_width,
+            button_height,
+            "Spawn Frog",
+            (0, 0, 255),
+            (255, 255, 255),
+            self.font,
+        )
 
-        self.spawn_snake_button = Button(left_margin + (button_width + button_spacing) * 2, button_y, button_width,
-                                         button_height, "Spawn Snake", (255, 200, 0), (0, 0, 0), self.font)
+        self.spawn_snake_button = Button(
+            left_margin + (button_width + button_spacing) * 2,
+            button_y,
+            button_width,
+            button_height,
+            "Spawn Snake",
+            (255, 200, 0),
+            (0, 0, 0),
+            self.font,
+        )
 
-        self.spawn_bird_button = Button(left_margin + (button_width + button_spacing) * 3, button_y, button_width,
-                                        button_height, "Spawn Bird", (100, 100, 255), (255, 255, 255), self.font)
+        self.spawn_bird_button = Button(
+            left_margin + (button_width + button_spacing) * 3,
+            button_y,
+            button_width,
+            button_height,
+            "Spawn Bird",
+            (100, 100, 255),
+            (255, 255, 255),
+            self.font,
+        )
 
-        self.reset_button = Button(left_margin + (button_width + button_spacing) * 4, button_y, button_width,
-                                   button_height, "Reset", (255, 0, 0), (255, 255, 255), self.font)
+        self.reset_button = Button(
+            left_margin + (button_width + button_spacing) * 4,
+            button_y,
+            button_width,
+            button_height,
+            "Reset",
+            (255, 0, 0),
+            (255, 255, 255),
+            self.font,
+        )
 
     def update(self, delta):
         self.elapsed_time += delta
@@ -112,7 +160,7 @@ class Ecosystem:
         self.birds = [bird for bird in self.birds if bird.alive]
 
         if self.generate_gifs:
-            self.frame_queue.append(pygame.image.tostring(self.surface, 'RGB'))
+            self.frame_queue.append(pygame.image.tostring(self.surface, "RGB"))
             current_time = time.time()
             if current_time - self.last_gif_time >= self.gif_interval:
                 self._generate_gif()
@@ -167,14 +215,19 @@ class Ecosystem:
 
     @staticmethod
     def interpolate_color(color1, color2, t):
-        return tuple(int(a + (b - a) * t) for a, b in zip(color1, color2))
+        return tuple(int(a + (b - a) * t) for a, b in zip(color1, color2, strict=False))
 
     def _generate_gif(self):
-        gif_path = os.path.join(self.gif_dir, f"ecosystem_{time.time()}.gif")
-        frames = [Image.frombytes('RGB', (self.width, self.height), frame) for frame in self.frame_queue]
+        gif_path = Path(self.gif_dir) / f"ecosystem_{time.time()}.gif"
+        frames = [Image.frombytes("RGB", (self.width, self.height), frame) for frame in self.frame_queue]
 
-        frames[0].save(gif_path, save_all=True, append_images=frames[1:], optimize=False, duration=1000 // self.fps,
-                       loop=0)
+        frames[0].save(
+            gif_path,
+            save_all=True,
+            append_images=frames[1:],
+            optimize=True,
+            duration=1000,
+        )
         self.gif_queue.put((gif_path, time.time()))
 
     def get_latest_gif(self):
@@ -217,32 +270,36 @@ def run_pygame(show_controls=True, generate_gifs=False):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif show_controls and event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    position = pygame.mouse.get_pos()
-                    if ecosystem.activity_slider.collidepoint(position):
-                        ecosystem.activity = (position[
-                                                  0] - ecosystem.activity_slider.x) / ecosystem.activity_slider.width
-                    elif ecosystem.spawn_plant_button.is_clicked(position):
-                        ecosystem.spawn_plant()
-                    elif ecosystem.spawn_frog_button.is_clicked(position):
-                        ecosystem.spawn_frog()
-                    elif ecosystem.spawn_snake_button.is_clicked(position):
-                        ecosystem.spawn_snake()
-                    elif ecosystem.spawn_bird_button.is_clicked(position):
-                        ecosystem.spawn_bird()
-                    elif ecosystem.reset_button.is_clicked(position):
-                        ecosystem.reset()
+            elif show_controls and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                position = pygame.mouse.get_pos()
+                if ecosystem.activity_slider.collidepoint(position):
+                    ecosystem.activity = (position[0] - ecosystem.activity_slider.x) / ecosystem.activity_slider.width
+                elif ecosystem.spawn_plant_button.is_clicked(position):
+                    ecosystem.spawn_plant()
+                elif ecosystem.spawn_frog_button.is_clicked(position):
+                    ecosystem.spawn_frog()
+                elif ecosystem.spawn_snake_button.is_clicked(position):
+                    ecosystem.spawn_snake()
+                elif ecosystem.spawn_bird_button.is_clicked(position):
+                    ecosystem.spawn_bird()
+                elif ecosystem.reset_button.is_clicked(position):
+                    ecosystem.reset()
 
         ecosystem.update(delta)
         screen.blit(ecosystem.draw(), (0, 0))
 
         if show_controls:
             pygame.draw.rect(screen, (200, 200, 200), ecosystem.activity_slider)
-            pygame.draw.rect(screen, (0, 255, 0), (
-                ecosystem.activity_slider.x, ecosystem.activity_slider.y,
-                ecosystem.activity_slider.width * ecosystem.activity,
-                ecosystem.activity_slider.height))
+            pygame.draw.rect(
+                screen,
+                (0, 255, 0),
+                (
+                    ecosystem.activity_slider.x,
+                    ecosystem.activity_slider.y,
+                    ecosystem.activity_slider.width * ecosystem.activity,
+                    ecosystem.activity_slider.height,
+                ),
+            )
 
             ecosystem.spawn_plant_button.draw(screen)
             ecosystem.spawn_frog_button.draw(screen)

@@ -1,5 +1,6 @@
-import random
 import math
+import random
+
 import pygame
 from pygame import Vector2
 
@@ -8,7 +9,7 @@ class Bird:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.position = Vector2(random.randint(0, width), random.randint(0, height * 0.7))
+        self.position = Vector2(random.randint(0, width), random.randint(0, int(height * 0.7)))
         self.velocity = Vector2(random.uniform(-1, 1), random.uniform(-1, 1)).normalize() * 2
         self.size = random.uniform(15, 25)
         self.color = self.generate_color()
@@ -51,11 +52,17 @@ class Bird:
         pygame.draw.circle(surface, (0, 0, 0), (int(eye_position.x), int(eye_position.y)), int(self.size * 0.1))
 
         beak_position = self.position + self.velocity.normalize() * self.size
-        pygame.draw.polygon(surface, (255, 200, 0), [
-            beak_position,
-            beak_position + Vector2(self.size * 0.3, self.size * 0.1).rotate(self.velocity.angle_to(Vector2(1, 0))),
-            beak_position + Vector2(self.size * 0.3, -self.size * 0.1).rotate(self.velocity.angle_to(Vector2(1, 0)))
-        ])
+        pygame.draw.polygon(
+            surface,
+            (255, 200, 0),
+            [
+                beak_position,
+                beak_position
+                + Vector2(self.size * 0.3, self.size * 0.1).rotate(self.velocity.angle_to(Vector2(1, 0))),
+                beak_position
+                + Vector2(self.size * 0.3, -self.size * 0.1).rotate(self.velocity.angle_to(Vector2(1, 0))),
+            ],
+        )
 
     def spawn(self):
         self.alive = True
