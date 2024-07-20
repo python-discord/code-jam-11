@@ -23,6 +23,25 @@ You'll now need to configure the bot. See the [configuring section](#configuring
 
 Finally, you can start the bot with `python -m src`.
 
+### Using docker
+
+The project also supports [docker](https://www.docker.com/) installation, which should allow running the project
+anywhere, without installing all of the dependencies manually. This is a lot more convenient way to run the bot, if you
+just want to run it and you don't wish to do any actual development.
+
+To use docker, you can check out the images that are automatically built after each update to the `main` branch on
+[ghcr](https://github.com/itsdrike/code-jam-2024/pkgs/container/code-jam-2024). You can also use [`docker
+compose`](https://docs.docker.com/compose/) with the [`docker-compose.yaml`](./docker-compose.yaml) file, which will
+pull this image from ghcr.
+
+If you want to build the image locally (to include some other changes that aren't yet in the main branch, maybe during
+development or to customize something when deploying), you can also use the
+[`docker-compose.local.yaml`](./docker-compose.local.yaml), which defines an image building step from our
+[`Dockerfile`](./Dockerfile).
+
+Note that you will still need to create a `.env` file with all of the configuration variables (see [the configuring
+section](#configuring-the-bot)
+
 ## Configuring the bot
 
 The bot is configured using environment variables. You can either create a `.env` file and define these variables
