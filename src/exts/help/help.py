@@ -29,14 +29,14 @@ class HelpCog(Cog):
                 continue
 
             if isinstance(command, SlashCommand):
-                embed.add_field(name=mention_command(command, self.bot), value=command.description, inline=False)
+                embed.add_field(name=mention_command(command), value=command.description, inline=False)
             if isinstance(command, SlashCommandGroup):
                 embed.add_field(
-                    name=f"{mention_command(command, self.bot)} group",
+                    name=f"{mention_command(command)} group",
                     value=command.description
                     + "\n\n"
                     + "\n".join(
-                        f"{mention_command(subcommand, self.bot)}: {subcommand.description}"
+                        f"{mention_command(subcommand)}: {subcommand.description}"
                         for subcommand in command.subcommands
                     ),
                     inline=False,
