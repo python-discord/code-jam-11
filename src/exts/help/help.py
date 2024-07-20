@@ -1,7 +1,10 @@
-from discord import ApplicationContext, Bot, CheckFailure, Cog, Embed, SlashCommand, SlashCommandGroup, slash_command
+import discord
+from discord import ApplicationContext, Bot, CheckFailure, Cog, SlashCommand, SlashCommandGroup, slash_command
 from discord.ext.commands import CheckFailure as CommandCheckFailure
+from discord.ext.pages import Page, Paginator
 
-from src.utils import get_cat_image_url, mention_command
+from src.utils import mention_command
+from src.utils.cat_api import get_cat_image_url
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -16,10 +19,9 @@ class HelpCog(Cog):
     @slash_command()
     async def help(self, ctx: ApplicationContext) -> None:
         """Shows help for all available commands."""
-        embed = Embed(
-            title="Help command",
-            image=await get_cat_image_url(),
-        )
+        cat_image_url = await get_cat_image_url()
+        fields: list[tuple[str, str]] = []
+
         for command in self.bot.commands:
             try:
                 can_run = await command.can_run(ctx)
@@ -27,22 +29,28 @@ class HelpCog(Cog):
                 can_run = False
             if not can_run:
                 continue
-
             if isinstance(command, SlashCommand):
-                embed.add_field(name=mention_command(command), value=command.description, inline=False)
+                fields.append((mention_command(command), command.description))
             if isinstance(command, SlashCommandGroup):
-                embed.add_field(
-                    name=f"{mention_command(command)} group",
-                    value=command.description
+                value = (
+                    command.description
                     + "\n\n"
                     + "\n".join(
                         f"{mention_command(subcommand)}: {subcommand.description}"
                         for subcommand in command.subcommands
-                    ),
-                    inline=False,
+                    )
                 )
-            embed.add_field(name="", value="")
-        await ctx.respond(embed=embed)
+                fields.append((f"{mention_command(command)} group", value))
+
+        new_embed = lambda url: discord.Embed(title="help command").set_thumbnail(url=url)
+
+        embeds: list[discord.Embed] = [new_embed(cat_image_url)]
+        for name, value in fields:
+            if len(embeds[-1].fields) >= 5:
+                embeds.append(new_embed(cat_image_url))
+            embeds[-1].add_field(name=name, value=value, inline=False)
+        paginator = Paginator([Page(embeds=[embed]) for embed in embeds])
+        await paginator.respond(ctx.interaction)
 
 
 def setup(bot: Bot) -> None:
