@@ -4,7 +4,7 @@ from typing import cast
 from discord import Any, ApplicationContext, Bot, Cog, Colour, Embed, errors
 from discord.ext.commands import errors as commands_errors
 
-from src.settings import GITHUB_REPO
+from src.settings import FAIL_EMOJI, GITHUB_REPO
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -77,7 +77,10 @@ class ErrorHandler(Cog):
                 raise ValueError("Never (hopefully), here's some random code: 0xd1ff0aaac")
 
         if isinstance(exc, commands_errors.NotOwner):
-            await self.send_error_embed(ctx, description="❌ This command is limited to the bot owner.")
+            await self.send_error_embed(
+                ctx,
+                description=f"{FAIL_EMOJI} This command is limited to the bot owner.",
+            )
             return
 
         if isinstance(
@@ -88,7 +91,10 @@ class ErrorHandler(Cog):
                 commands_errors.MissingAnyRole,
             ),
         ):
-            await self.send_error_embed(ctx, description="❌ You don't have permission to run this command.")
+            await self.send_error_embed(
+                ctx,
+                description=f"{FAIL_EMOJI} You don't have permission to run this command.",
+            )
             return
 
         if isinstance(
@@ -101,19 +107,22 @@ class ErrorHandler(Cog):
         ):
             await self.send_error_embed(
                 ctx,
-                description="❌ I don't have the necessary permissions to perform this action.",
+                description=f"{FAIL_EMOJI} I don't have the necessary permissions to perform this action.",
             )
 
         if isinstance(exc, commands_errors.NoPrivateMessage):
-            await self.send_error_embed(ctx, description="❌ This command can only be used in a server.")
+            await self.send_error_embed(ctx, description=f"{FAIL_EMOJI} This command can only be used in a server.")
             return
 
         if isinstance(exc, commands_errors.PrivateMessageOnly):
-            await self.send_error_embed(ctx, description="❌ This command can only be used in a DM.")
+            await self.send_error_embed(ctx, description=f"{FAIL_EMOJI} This command can only be used in a DM.")
             return
 
         if isinstance(exc, commands_errors.NSFWChannelRequired):
-            await self.send_error_embed(ctx, description="❌ This command can only be used in an NSFW channel.")
+            await self.send_error_embed(
+                ctx,
+                description=f"{FAIL_EMOJI} This command can only be used in an NSFW channel.",
+            )
             return
 
         await self.send_unhandled_embed(ctx, exc)
