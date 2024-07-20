@@ -6,3 +6,8 @@ TVDB_API_KEY = get_config("TVDB_API_KEY")
 
 FAIL_EMOJI = "❌"
 SUCCESS_EMOJI = "✅"
+
+THETVDB_COPYRIGHT_FOOTER = (
+    "Metadata provided by TheTVDB. Please consider adding missing information or subscribing at " "thetvdb.com."
+)
+THETVDB_LOGO = "https://www.thetvdb.com/images/attribution/logo1.png"
