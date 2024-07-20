@@ -13,6 +13,7 @@ from discord import (
 from discord.ext.commands.errors import NotOwner
 
 from src.converters.bot_extension import ValidBotExtension
+from src.settings import FAIL_EMOJI, SUCCESS_EMOJI
 
 
 class Sudo(Cog):
@@ -33,9 +34,9 @@ class Sudo(Cog):
         try:
             self.bot.load_extension(extension)
         except ExtensionAlreadyLoaded:
-            await ctx.respond("❌ Extension is already loaded")
+            await ctx.respond(f"{FAIL_EMOJI} Extension is already loaded")
             return
-        await ctx.respond(f"✅ Extension `{extension}` loaded")
+        await ctx.respond(f"{SUCCESS_EMOJI} Extension `{extension}` loaded")
 
     @sudo.command()
     @option("extension", ValidBotExtension)
@@ -47,9 +48,9 @@ class Sudo(Cog):
         try:
             self.bot.unload_extension(extension)
         except ExtensionNotLoaded:
-            await ctx.respond("❌ Extension is not loaded")
+            await ctx.respond(f"{FAIL_EMOJI} Extension is not loaded")
             return
-        await ctx.respond(f"✅ Extension `{extension}` unloaded")
+        await ctx.respond(f"{SUCCESS_EMOJI} Extension `{extension}` unloaded")
 
     @sudo.command()
     @option("extension", ValidBotExtension)
@@ -67,7 +68,7 @@ class Sudo(Cog):
         self.bot.load_extension(extension)
 
         action = "reloaded" if already_loaded else "loaded"
-        await ctx.respond(f"✅ Extension `{extension}` {action}")
+        await ctx.respond(f"{SUCCESS_EMOJI} Extension `{extension}` {action}")
 
     @override
     async def cog_check(self, ctx: ApplicationContext) -> bool:
