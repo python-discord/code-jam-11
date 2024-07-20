@@ -55,6 +55,8 @@ packages = [{include = "python_code_jam_2024"}]
 python = "^3.10"
 pygame = "^2.6.0"
 pillow = "^10.4.0"
+discord.py = "^2.4.0"
+python-dotenv = "^1.0.1"
 
 
 [build-system]
