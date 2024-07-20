@@ -1,5 +1,15 @@
-import pygame
+import contextlib
+
+# Hide pygame welcome message
+with contextlib.redirect_stdout(None):
+    import pygame
+
 import random
+import os
+import time
+from collections import deque
+from queue import Queue
+from PIL import Image
 from .plant import Plant
 from .frog import Frog
 from .snake import Snake
@@ -7,12 +17,11 @@ from .bird import Bird
 
 
 class Ecosystem:
-    def __init__(self, width, height):
-        self.spawn_plant_button = None
+    def __init__(self, width, height, generate_gifs=False, gif_interval=5, gif_duration=5, fps=30):
         self.width = width
         self.height = height
-        self.activity = 0.5
-        self.time = 0
+        self.activity = 1
+        self.elapsed_time = 0
         self.surface = pygame.Surface((width, height))
 
         self.sky_colors = [
@@ -30,12 +39,19 @@ class Ecosystem:
         self.birds = []
 
         self.font = pygame.font.Font(None, 24)
-        self.activity_slider = None
-        self.spawn_frog_button = None
-        self.spawn_snake_button = None
-        self.spawn_bird_button = None
-        self.reset_button = None
         self.setup_ui()
+
+        # GIF generation attributes
+        self.generate_gifs = generate_gifs
+        self.gif_interval = gif_interval
+        self.gif_duration = gif_duration
+        self.fps = fps
+        if generate_gifs:
+            self.frame_queue = deque(maxlen=fps * gif_duration)
+            self.gif_queue = Queue()
+            self.gif_dir = "ecosystem_gifs"
+            os.makedirs(self.gif_dir, exist_ok=True)
+            self.last_gif_time = 0
 
     def setup_ui(self):
         button_width = 120
@@ -64,7 +80,7 @@ class Ecosystem:
                                    button_height, "Reset", (255, 0, 0), (255, 255, 255), self.font)
 
     def update(self, delta):
-        self.time += delta
+        self.elapsed_time += delta
 
         for plant in self.plants:
             plant.update(delta, self.activity)
@@ -75,19 +91,17 @@ class Ecosystem:
         for snake in self.snakes:
             snake.update(delta, self.activity)
 
+        for bird in self.birds:
+            bird.update(delta, self.activity)
+
         if random.random() < self.activity * delta:
-            self.plants.append(Plant(random.randint(0, self.width), self.height))
+            self.spawn_plant()
 
         if random.random() < self.activity * delta * 0.5:
-            new_frog = Frog(random.randint(0, self.width), self.height - 20, self.width, self.height)
-            new_frog.spawn()
-            self.frogs.append(new_frog)
+            self.spawn_frog()
 
         if random.random() < self.activity * delta * 0.3:
             self.spawn_snake()
-
-        for bird in self.birds:
-            bird.update(delta, self.activity)
 
         if random.random() < self.activity * delta * 0.4:
             self.spawn_bird()
@@ -96,6 +110,13 @@ class Ecosystem:
         self.frogs = [frog for frog in self.frogs if frog.alive]
         self.snakes = [snake for snake in self.snakes if snake.alive]
         self.birds = [bird for bird in self.birds if bird.alive]
+
+        if self.generate_gifs:
+            self.frame_queue.append(pygame.image.tostring(self.surface, 'RGB'))
+            current_time = time.time()
+            if current_time - self.last_gif_time >= self.gif_interval:
+                self._generate_gif()
+                self.last_gif_time = current_time
 
     def draw(self):
         sky_color = self.interpolate_color(self.sky_colors[0], self.sky_colors[1], self.activity)
@@ -120,14 +141,14 @@ class Ecosystem:
 
     def reset(self):
         self.activity = 0.5
-        self.time = 0
+        self.elapsed_time = 0
         self.plants = []
         self.frogs = []
         self.snakes = []
         self.birds = []
 
     def spawn_plant(self):
-        self.plants.append(Plant(random.randint(0, self.width), self.height))
+        self.plants.append(Plant(random.randint(0, self.width), self.height * 0.7))
 
     def spawn_frog(self):
         new_frog = Frog(random.randint(0, self.width), self.height - 20, self.width, self.height)
@@ -135,7 +156,7 @@ class Ecosystem:
         self.frogs.append(new_frog)
 
     def spawn_snake(self):
-        new_snake = Snake(random.randint(0, self.width), self.height, self.width, self.height)
+        new_snake = Snake(random.randint(0, self.width), self.height * 0.7, self.width, self.height)
         new_snake.spawn()
         self.snakes.append(new_snake)
 
@@ -147,6 +168,19 @@ class Ecosystem:
     @staticmethod
     def interpolate_color(color1, color2, t):
         return tuple(int(a + (b - a) * t) for a, b in zip(color1, color2))
+
+    def _generate_gif(self):
+        gif_path = os.path.join(self.gif_dir, f"ecosystem_{time.time()}.gif")
+        frames = [Image.frombytes('RGB', (self.width, self.height), frame) for frame in self.frame_queue]
+
+        frames[0].save(gif_path, save_all=True, append_images=frames[1:], optimize=False, duration=1000 // self.fps,
+                       loop=0)
+        self.gif_queue.put((gif_path, time.time()))
+
+    def get_latest_gif(self):
+        if self.gif_queue.empty():
+            return None
+        return self.gif_queue.get()
 
 
 class Button:
@@ -167,14 +201,14 @@ class Button:
         return self.rect.collidepoint(pos)
 
 
-def run_pygame(show_controls=True):
+def run_pygame(show_controls=True, generate_gifs=False):
     pygame.init()
     width, height = 800, 600
     screen = pygame.display.set_mode((width, height))
-    pygame.display.set_caption("Discord Ecosystem Visualization")
+    pygame.display.set_caption("Ecosystem Visualization")
     clock = pygame.time.Clock()
 
-    ecosystem = Ecosystem(width, height)
+    ecosystem = Ecosystem(width, height, generate_gifs=generate_gifs)
 
     running = True
     while running:
@@ -187,7 +221,8 @@ def run_pygame(show_controls=True):
                 if event.button == 1:
                     position = pygame.mouse.get_pos()
                     if ecosystem.activity_slider.collidepoint(position):
-                        ecosystem.activity = (position[0] - ecosystem.activity_slider.x) / ecosystem.activity_slider.width
+                        ecosystem.activity = (position[
+                                                  0] - ecosystem.activity_slider.x) / ecosystem.activity_slider.width
                     elif ecosystem.spawn_plant_button.is_clicked(position):
                         ecosystem.spawn_plant()
                     elif ecosystem.spawn_frog_button.is_clicked(position):
@@ -231,5 +266,34 @@ def run_pygame(show_controls=True):
             screen.blit(birds_text, (20, 170))
 
         pygame.display.flip()
+
+        if generate_gifs:
+            latest_gif = ecosystem.get_latest_gif()
+            if latest_gif:
+                gif_path, timestamp = latest_gif
+                print(f"New GIF generated at {timestamp}: {gif_path}")
+
+    pygame.quit()
+
+
+def run_gif_generator(duration=None):
+    pygame.init()
+    width, height = 800, 600
+    ecosystem = Ecosystem(width, height, generate_gifs=True)
+    clock = pygame.time.Clock()
+
+    start_time = time.time()
+    running = True
+    while running:
+        delta = clock.tick(60) / 1000.0
+        ecosystem.update(delta)
+        ecosystem.draw()
+
+        if duration and time.time() - start_time > duration:
+            running = False
+
+        latest_gif = ecosystem.get_latest_gif()
+        if latest_gif:
+            yield latest_gif
 
     pygame.quit()

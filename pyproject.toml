@@ -42,3 +42,21 @@ ignore = [
     "ANN101",
     "ANN102",
 ]
+
+[tool.poetry]
+name = "python-code-jam-2024"
+version = "0.1.0"
+description = ""
+authors = ["Steve Mostovoy <stevemostovoysm@gmail.com>"]
+readme = "README.md"
+packages = [{include = "python_code_jam_2024"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pygame = "^2.6.0"
+pillow = "^10.4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
