@@ -454,7 +454,7 @@ class SearchResult(BaseModel):
     director: str | None = None
     first_air_time: str | None = None
     genres: list[str] | None = None
-    id: str | None = None
+    id: str
     image_url: str | None = None
     name: str | None = None
     is_official: bool | None = None
