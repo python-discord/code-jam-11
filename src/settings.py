@@ -1,8 +1,9 @@
 import os
-from os.path import join, dirname
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-dotenv_path = join(dirname(__file__), '.env')
+dotenv_path = Path(Path(__file__).parent) / "../.env"
 load_dotenv(dotenv_path)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
