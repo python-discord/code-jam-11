@@ -42,7 +42,6 @@ class Frog:
                 self.state_time = 0
                 self.y = self.jump_start_y
 
-        # Randomly despawn
         if random.random() < 0.01 * delta:
             self.alive = False
 
@@ -71,11 +70,8 @@ class Frog:
         pygame.draw.circle(surface, self.pupil_color, left_eye_pos, pupil_size)
         pygame.draw.circle(surface, self.pupil_color, right_eye_pos, pupil_size)
 
-        mouth_start = (int(self.x - scaled_size // 4), int(self.y + scaled_size // 4))
-        pygame.draw.arc(surface, (50, 50, 50),
-                        (mouth_start[0], mouth_start[1] - scaled_size // 8,
-                         scaled_size // 2, scaled_size // 4),
-                        0, math.pi, 2)
+        mouth_rect = pygame.Rect(self.x - scaled_size // 4, self.y, scaled_size // 2, scaled_size // 4)
+        pygame.draw.arc(surface, (50, 50, 50), mouth_rect, math.pi, 2 * math.pi, 2)
 
     def spawn(self):
         self.alive = True
