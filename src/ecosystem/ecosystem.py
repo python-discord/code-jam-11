@@ -9,7 +9,7 @@ class Ecosystem:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.activity = 0
+        self.activity = 0.5  # Start with medium activity
         self.time = 0
         self.surface = pygame.Surface((width, height))
 
@@ -27,7 +27,6 @@ class Ecosystem:
 
     def update(self, delta):
         self.time += delta
-        self.activity = min(1, max(0, self.activity + math.sin(self.time / 4) * delta))
 
         for plant in self.plants:
             plant.update(delta, self.activity)
@@ -39,7 +38,7 @@ class Ecosystem:
             self.plants.append(Plant(random.randint(0, self.width), self.height))
 
         if random.random() < self.activity * delta * 0.5:
-            new_frog = Frog(random.randint(0, self.width), self.height, self.width, self.height)
+            new_frog = Frog(random.randint(0, self.width), self.height - 20, self.width, self.height)
             new_frog.spawn()
             self.frogs.append(new_frog)
 
@@ -61,12 +60,44 @@ class Ecosystem:
 
         return self.surface
 
+    def reset(self):
+        self.activity = 0.5
+        self.time = 0
+        self.plants = []
+        self.frogs = []
+
+    def spawn_plant(self):
+        self.plants.append(Plant(random.randint(0, self.width), self.height))
+
+    def spawn_frog(self):
+        new_frog = Frog(random.randint(0, self.width), self.height - 20, self.width, self.height)
+        new_frog.spawn()
+        self.frogs.append(new_frog)
+
     @staticmethod
     def interpolate_color(color1, color2, t):
         return tuple(int(a + (b - a) * t) for a, b in zip(color1, color2))
 
 
-def run_pygame():
+class Button:
+    def __init__(self, x, y, width, height, text, color, text_color, font):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = text
+        self.color = color
+        self.text_color = text_color
+        self.font = font
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.color, self.rect)
+        text_surface = self.font.render(self.text, True, self.text_color)
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        surface.blit(text_surface, text_rect)
+
+    def is_clicked(self, pos):
+        return self.rect.collidepoint(pos)
+
+
+def run_pygame(show_controls=True):
     pygame.init()
     width, height = 800, 600
     screen = pygame.display.set_mode((width, height))
@@ -75,6 +106,13 @@ def run_pygame():
 
     ecosystem = Ecosystem(width, height)
 
+    font = pygame.font.Font(None, 24)
+
+    activity_slider = pygame.Rect(20, 20, 200, 20)
+    spawn_plant_button = Button(20, 50, 100, 30, "Spawn Plant", (0, 255, 0), (0, 0, 0), font)
+    spawn_frog_button = Button(130, 50, 100, 30, "Spawn Frog", (0, 0, 255), (255, 255, 255), font)
+    reset_button = Button(240, 50, 100, 30, "Reset", (255, 0, 0), (255, 255, 255), font)
+
     running = True
     while running:
         delta = clock.tick(60) / 1000.0
@@ -82,9 +120,39 @@ def run_pygame():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif show_controls and event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    pos = pygame.mouse.get_pos()
+                    if activity_slider.collidepoint(pos):
+                        ecosystem.activity = (pos[0] - activity_slider.x) / activity_slider.width
+                    elif spawn_plant_button.is_clicked(pos):
+                        ecosystem.spawn_plant()
+                    elif spawn_frog_button.is_clicked(pos):
+                        ecosystem.spawn_frog()
+                    elif reset_button.is_clicked(pos):
+                        ecosystem.reset()
 
         ecosystem.update(delta)
         screen.blit(ecosystem.draw(), (0, 0))
+
+        if show_controls:
+            pygame.draw.rect(screen, (200, 200, 200), activity_slider)
+            pygame.draw.rect(screen, (0, 255, 0), (
+                activity_slider.x, activity_slider.y, activity_slider.width * ecosystem.activity,
+                activity_slider.height))
+            spawn_plant_button.draw(screen)
+            spawn_frog_button.draw(screen)
+            reset_button.draw(screen)
+
+            activity_text = font.render(f"Activity: {ecosystem.activity:.2f}", True, (0, 0, 0))
+            screen.blit(activity_text, (20, 90))
+
+            plants_text = font.render(f"Plants: {len(ecosystem.plants)}", True, (0, 0, 0))
+            screen.blit(plants_text, (20, 110))
+
+            frogs_text = font.render(f"Frogs: {len(ecosystem.frogs)}", True, (0, 0, 0))
+            screen.blit(frogs_text, (20, 130))
+
         pygame.display.flip()
 
     pygame.quit()
