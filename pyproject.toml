@@ -30,6 +30,10 @@ pytest = "^8.1.1"
 pytest-asyncio = "^0.23.6"
 pytest-cov = "^5.0.0"
 
+
+[tool.poetry.group.dev.dependencies]
+datamodel-code-generator = "^0.25.8"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
