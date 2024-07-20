@@ -12,6 +12,8 @@ python = "3.12.*"
 pygame = "2.6.0"
 pillow = "10.4.0"
 setuptools = "^71.0.4"
+discord-py = "^2.4.0"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
 ruff = "0.5.4"
