@@ -23,6 +23,7 @@ class Bot(discord.Bot):
         "src.exts.error_handler",
         "src.exts.sudo",
         "src.exts.help",
+        "src.exts.tvdb_info",
     ]
 
     def __init__(self, *args: object, http_session: aiohttp.ClientSession, **kwargs: object) -> None:
