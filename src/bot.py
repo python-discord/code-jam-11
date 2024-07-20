@@ -16,13 +16,28 @@ class MyClient(discord.Client):
         await self.tree.sync(guild=MY_GUILD)
 
 
-client = MyClient(intents=discord.Intents.default())
+client = MyClient(intents=discord.Intents.all())
 
 
 @client.event
 async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     print('------')
+
+
+@client.event
+async def on_message(message: discord.Message):
+    print(f'{message.author.display_name} sent a message: {message.content} @ {message.created_at}')
+
+
+@client.event
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
+    message_id = payload.message_id
+    channel_id = payload.channel_id
+    guild = client.get_guild(payload.guild_id)
+    channel = guild.get_channel(channel_id)
+    message = await channel.fetch_message(message_id)
+    print(f'{payload.emoji} added on {message.content} @ {message.created_at}')
 
 
 @client.tree.context_menu(name='Show Member Messages')
