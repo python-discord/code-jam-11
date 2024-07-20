@@ -5,8 +5,14 @@ import aiohttp
 from yarl import URL
 
 from src.settings import TVDB_API_KEY
-from src.tvdb.generated_models import SearchResult, SeriesBaseRecord
-from src.tvdb.models import SearchResponse, SeriesResponse
+from src.tvdb.generated_models import (
+    MovieBaseRecord,
+    MovieExtendedRecord,
+    SearchResult,
+    SeriesBaseRecord,
+    SeriesExtendedRecord,
+)
+from src.tvdb.models import MovieResponse, SearchResponse, SeriesResponse
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -51,8 +57,14 @@ class Series(_Media):
         """
         return await self.client.search(search_query, "series", limit)
 
+    @overload
+    async def fetch(self, *, extended: Literal[False]) -> SeriesBaseRecord: ...
+
+    @overload
+    async def fetch(self, *, extended: Literal[True]) -> SeriesExtendedRecord: ...
+
     @override
-    async def fetch(self, *, extended: bool = False) -> SeriesBaseRecord:
+    async def fetch(self, *, extended: bool = False) -> SeriesBaseRecord | SeriesExtendedRecord:
         """Fetch a series by its ID.
 
         :param extended:
@@ -75,15 +87,19 @@ class Movies(_Media):
         """
         return await self.client.search(search_query, "movie", limit)
 
+    @overload
+    async def fetch(self, *, extended: Literal[False]) -> MovieBaseRecord: ...
+    @overload
+    async def fetch(self, *, extended: Literal[True]) -> MovieExtendedRecord: ...
     @override
-    async def fetch(self, *, extended: bool = False) -> SeriesBaseRecord:
+    async def fetch(self, *, extended: bool = False) -> MovieBaseRecord | MovieExtendedRecord:
         """Fetch a movie by its ID.
 
         :param extended:  Whether to fetch extended information.
         :return:
         """
         data = await self.client.request("GET", f"movies/{self.id}" + ("/extended" if extended else ""))
-        return SeriesResponse(**data).data  # pyright: ignore[reportCallIssue]
+        return MovieResponse(**data).data  # pyright: ignore[reportCallIssue]
 
 
 class InvalidApiKeyError(Exception):
