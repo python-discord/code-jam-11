@@ -286,6 +286,11 @@ class Translation(BaseModel):
 class TranslationSimple(RootModel[dict[str, str] | None]):
     root: dict[str, str] | None = None
 
+    def __getitem__(self, item: str) -> str | None:
+        if self.root is None:
+            return None
+        return self.root.get(item)
+
 
 class TranslationExtended(BaseModel):
     nameTranslations: list[Translation] | None = None
@@ -463,7 +468,7 @@ class SearchResult(BaseModel):
     objectID: str | None = None
     officialList: str | None = None
     overview: str | None = None
-    overviews: TranslationSimple | None = None
+    overviews: TranslationSimple = TranslationSimple(None)
     overview_translated: list[str] | None = None
     poster: str | None = None
     posters: list[str] | None = None
@@ -474,7 +479,7 @@ class SearchResult(BaseModel):
     studios: list[str] | None = None
     title: str | None = None
     thumbnail: str | None = None
-    translations: TranslationSimple | None = None
+    translations: TranslationSimple = TranslationSimple(None)
     translationsWithLang: list[str] | None = None
     tvdb_id: str | None = None
     type: str | None = None

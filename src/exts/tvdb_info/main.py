@@ -5,11 +5,15 @@ import discord
 from discord import ApplicationContext, Cog, option, slash_command
 
 from src.bot import Bot
+from src.settings import THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
 from src.tvdb import TvdbClient
 from src.tvdb.models import SearchResults
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
+
+MOVIE_EMOJI = "🎬"
+SERIES_EMOJI = "📺"
 
 
 class InfoView(discord.ui.View):
@@ -35,9 +39,29 @@ class InfoView(discord.ui.View):
 
     def _get_embed(self) -> discord.Embed:
         result = self.results[self.index]
-        embed = discord.Embed(
-            title=result.name or result.title, description=result.overview or "No overview available."
-        )
+        original_title = result.name
+        en_title = result.translations["eng"]
+        original_overview = result.overview
+        en_overview = result.overviews["eng"]
+        if en_overview and en_overview != original_overview:
+            overview = f"{en_overview}"
+        elif not en_overview and original_overview:
+            overview = f"{original_overview}\n\n*No English overview available.*"
+        else:
+            overview = "*No overview available.*"
+        if original_title and original_title != en_title:
+            title = f"{original_title} ({en_title})"
+        else:
+            title = en_title
+        if result.id[0] == "m":
+            title = f"{MOVIE_EMOJI} {title}"
+            url = f"https://www.thetvdb.com/movies/{result.slug}"
+        else:
+            title = f"{SERIES_EMOJI} {title}"
+            url = f"https://www.thetvdb.com/series/{result.slug}"
+        embed = discord.Embed(title=title, color=discord.Color.blurple(), url=url)
+        embed.add_field(name="Overview", value=overview, inline=False)
+        embed.set_footer(text=THETVDB_COPYRIGHT_FOOTER, icon_url=THETVDB_LOGO)
         embed.set_image(url=result.image_url)
         return embed
 
