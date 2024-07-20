@@ -27,7 +27,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message: discord.Message):
-    print(f'{message.author.display_name} sent a message: {message.content} @ {message.created_at}')
+    print(f"{message.author.display_name} sent a message: {message.content} @ {message.created_at}")
 
 
 @client.event
@@ -37,19 +37,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     guild = client.get_guild(payload.guild_id)
     channel = guild.get_channel(channel_id)
     message = await channel.fetch_message(message_id)
-    print(f'{payload.emoji} added on {message.content} @ {message.created_at}')
-
-
-@client.tree.context_menu(name='Show Member Messages')
-@client.tree.context_menu(name="Show Member Messages")
-async def show_member_data(interaction: discord.Interaction, member: discord.Member):
-    # TODO: Remove
-    messages = [
-        message.content
-        async for message in interaction.channel.history(limit=100, oldest_first=True)
-        if message.author == member
-    ]
-    await interaction.response.send_message(f"Message history of {member.display_name}: {messages}")
+    print(f"{payload.emoji} added on {message.content} @ {message.created_at}")
 
 
 client.run(BOT_TOKEN)
