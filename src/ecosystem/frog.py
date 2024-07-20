@@ -26,8 +26,8 @@ class Frog:
         self.scale = 1.0
         self.alive = True
 
-    def update(self, dt, activity):
-        self.state_time += dt
+    def update(self, delta, activity):
+        self.state_time += delta
 
         if self.state == "rest":
             if self.state_time >= self.rest_duration:
@@ -36,14 +36,14 @@ class Frog:
             progress = self.state_time / self.jump_duration
             if progress <= 1:
                 self.y = self.jump_start_y - self.jump_height * math.sin(progress * math.pi)
-                self.x += (self.jump_target_x - self.x) * dt / self.jump_duration
+                self.x += (self.jump_target_x - self.x) * delta / self.jump_duration
             else:
                 self.state = "rest"
                 self.state_time = 0
                 self.y = self.jump_start_y
 
         # Randomly despawn
-        if random.random() < 0.01 * dt:
+        if random.random() < 0.01 * delta:
             self.alive = False
 
     def start_jump(self):
