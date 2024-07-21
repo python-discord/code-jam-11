@@ -8,6 +8,7 @@ from discord import ApplicationContext, Cog, option, slash_command
 from src.bot import Bot
 from src.settings import THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
 from src.tvdb import FetchMeta, Movie, Series, TvdbClient
+from src.tvdb.errors import InvalidIdError
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -102,16 +103,28 @@ class InfoCog(Cog):
         async with aiohttp.ClientSession() as session:
             client = TvdbClient(session)
             if by_id:
-                match entity_type:
-                    case "movie":
-                        response = [await Movie.fetch(int(query), client, extended=True, meta=FetchMeta.TRANSLATIONS)]
-                    case "series":
-                        response = [await Series.fetch(int(query), client, extended=True, meta=FetchMeta.TRANSLATIONS)]
-                    case None:
-                        await ctx.respond(
-                            "You must specify a type (movie or series) when searching by ID.", ephemeral=True
-                        )
-                        return
+                if query.startswith("movie-"):
+                    entity_type = "movie"
+                    query = query[6:]
+                elif query.startswith("series-"):
+                    entity_type = "series"
+                    query = query[7:]
+                try:
+                    match entity_type:
+                        case "movie":
+                            response = [await Movie.fetch(query, client, extended=True, meta=FetchMeta.TRANSLATIONS)]
+                        case "series":
+                            response = [await Series.fetch(query, client, extended=True, meta=FetchMeta.TRANSLATIONS)]
+                        case None:
+                            await ctx.respond(
+                                "You must specify a type (movie or series) when searching by ID.", ephemeral=True
+                            )
+                            return
+                except InvalidIdError:
+                    await ctx.respond(
+                        'Invalid ID. Id must be an integer, or "movie-" / "series-" followed by an integer.'
+                    )
+                    return
             else:
                 match entity_type:
                     case "movie":

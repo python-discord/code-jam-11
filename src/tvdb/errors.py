@@ -9,6 +9,10 @@ class BadCallError(TVDBError):
     """Exception raised when the meta value is incompatible with the class."""
 
 
+class InvalidIdError(TVDBError):
+    """Exception raised when the ID provided is invalid."""
+
+
 class InvalidApiKeyError(TVDBError):
     """Exception raised when the TVDB API key used was invalid."""
 

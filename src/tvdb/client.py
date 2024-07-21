@@ -20,7 +20,7 @@ from src.tvdb.generated_models import (
 )
 from src.utils.log import get_logger
 
-from .errors import BadCallError, InvalidApiKeyError
+from .errors import BadCallError, InvalidApiKeyError, InvalidIdError
 
 log = get_logger(__name__)
 
@@ -40,7 +40,12 @@ class FetchMeta(Enum):
 
 def parse_media_id(media_id: int | str) -> int:
     """Parse the media ID from a string."""
-    return int(str(media_id).removeprefix("movie-").removeprefix("series-"))
+    try:
+        media_id = int(str(media_id).removeprefix("movie-").removeprefix("series-"))
+    except ValueError:
+        raise InvalidIdError("Invalid media ID.")
+    else:
+        return media_id
 
 
 class _Media(ABC):
