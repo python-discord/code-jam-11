@@ -18,6 +18,7 @@ python = "^3.12"
 py-cord = "^2.6.0"
 python-decouple = "^3.8"
 coloredlogs = "^15.0.1"
+pydantic = "^2.8.2"
 
 [tool.poetry.group.lint.dependencies]
 ruff = "^0.3.2"
@@ -28,6 +29,28 @@ basedpyright = "^1.13.3"
 pytest = "^8.1.1"
 pytest-asyncio = "^0.23.6"
 pytest-cov = "^5.0.0"
+
+
+[tool.poetry.group.dev.dependencies]
+datamodel-code-generator = {extras = ["http"], version = "^0.25.8"}
+
+
+[tool.datamodel-codegen]
+field-constraints = true
+snake-case-field = true
+target-python-version = "3.12"
+use-default-kwarg = true
+use-exact-imports = true
+use-field-description = true
+use-union-operator = true
+reuse-model = true
+output-model-type = "pydantic_v2.BaseModel"
+custom-file-header = "# ruff: noqa: D101 # Allow missing docstrings"
+field-include-all-keys = true
+strict-nullable = true
+
+[tool.poetry.scripts]
+generate-tvdb-models = "tools.generate_tvdb_models:main"
 
 [build-system]
 requires = ["poetry-core"]
