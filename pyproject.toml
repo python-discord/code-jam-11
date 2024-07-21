@@ -182,6 +182,7 @@ max-statements = 75
 
 [tool.ruff.format]
 line-ending = "lf"
+exclude = ["alembic-migrations/versions/*.py"]
 
 [tool.basedpyright]
 pythonPlatform = "All"
