@@ -32,7 +32,7 @@ type AnyRecord = SeriesRecord | MovieRecord
 
 
 class FetchMeta(Enum):
-    """When calling fetch with extended=True, is used if wanting to fetch translations or episodes as well."""
+    """When calling fetch with extended=True, this is used if we want to fetch translations or episodes as well."""
 
     TRANSLATIONS = "translations"
     EPISODES = "episodes"
