@@ -95,8 +95,8 @@ class _Media(ABC):
     def id(self, value: int | str) -> None:  # pyright: ignore[reportPropertyTypeMismatch]
         self._id = parse_media_id(value)
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     async def fetch(cls, media_id: int | str, *, client: "TvdbClient", extended: bool = False) -> "_Media": ...
 
 
