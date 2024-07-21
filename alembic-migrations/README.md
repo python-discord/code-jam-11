@@ -71,3 +71,15 @@ That said, in vast majority of cases, you will not need to write your migrations
 might need to, check [the documentation][alembic-autogeneration-autodetection].
 
 [alembic-autogeneration-autodetection]: https://guide.pycord.dev/getting-started/creating-your-first-bot#creating-the-bot-application
+
+### Stamping
+
+In case you've made modifications to your database already (perhaps by manually running some SQL commands to test out a
+manually written migration), you might want to skip applying a migration and instead just tell Alembic that the
+database is already up to date with the latest revision.
+
+Thankfully, alembic makes this really simple, all you need to do is run:
+
+```bash
+alembic stamp head
+```
