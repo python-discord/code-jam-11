@@ -172,17 +172,13 @@ max-statements = 75
 ]
 "alembic-migrations/versions/*" = [
   "INP001", # Implicit namespace package
-  "W291",   # Trailing whitespace
   "D103",   # Missing docstring in public function
   "D400",   # First line should end with a period
   "D415",   # First line should end with a period, question mark, or exclamation point
-  "F401",   # Unused import
-  "Q000",   # Single quotes found but double quotes preferred
 ]
 
 [tool.ruff.format]
 line-ending = "lf"
-exclude = ["alembic-migrations/versions/*.py"]
 
 [tool.basedpyright]
 pythonPlatform = "All"
@@ -218,12 +214,6 @@ reportUnknownVariableType = false
 reportUnknownMemberType = false
 reportUnknownParameterType = false
 reportUnknownLambdaType = false
-
-executionEnvironments = [
-  { root = "src" },
-  { root = "tests" },
-  { root = "alembic-migrations/versions", reportUnusedImport = false },
-]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
