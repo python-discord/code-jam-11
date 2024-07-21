@@ -57,7 +57,6 @@ class _Media(ABC):
         self.image_url: URL | None = None
         if isinstance(self.data, SearchResult) and self.data.image_url:
             self.image_url = URL(self.data.image_url)
-        # that not isn't needed but is there for clarity and for pyright
         elif not isinstance(self.data, SearchResult) and self.data.image:
             self.image_url = URL(self.data.image)
 
