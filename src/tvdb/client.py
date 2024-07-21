@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import ClassVar, Literal, overload, override
+from typing import ClassVar, Literal, final, overload, override
 
 import aiohttp
 from yarl import URL
@@ -96,20 +96,14 @@ class _Media(ABC):
     def id(self, value: int | str) -> None:  # pyright: ignore[reportPropertyTypeMismatch]
         self._id = parse_media_id(value)
 
-    @classmethod
     @abstractmethod
+    @classmethod
     async def fetch(cls, media_id: int | str, *, client: "TvdbClient", extended: bool = False) -> "_Media": ...
 
 
+@final
 class Movie(_Media):
     """Class to interact with the TVDB API for movies."""
-
-    @overload
-    @classmethod
-    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: Literal[False]) -> "Movie": ...
-    @overload
-    @classmethod
-    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: Literal[True]) -> "Movie": ...
 
     @override
     @classmethod
@@ -127,15 +121,9 @@ class Movie(_Media):
         return cls(client, response.data)
 
 
+@final
 class Series(_Media):
     """Class to interact with the TVDB API for series."""
-
-    @overload
-    @classmethod
-    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: Literal[False]) -> "Series": ...
-    @overload
-    @classmethod
-    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: Literal[True]) -> "Series": ...
 
     @override
     @classmethod
