@@ -168,7 +168,7 @@ class Movie(_Media):
     @classmethod
     async def supports_meta(cls, meta: FetchMeta) -> bool:
         """Check if the class supports a specific meta."""
-        return meta == FetchMeta.TRANSLATIONS
+        return meta is FetchMeta.TRANSLATIONS
 
 
 @final
