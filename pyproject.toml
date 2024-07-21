@@ -49,6 +49,7 @@ ignore = [
   "ARG", # flake8-unused-arguments
   "TD",  # flake8-todos
   "FIX", # flake8-fixme
+  "PD",  # pandas-vet
 
   "D100", # Missing docstring in public module
   "D104", # Missing docstring in public package
