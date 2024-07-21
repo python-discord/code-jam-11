@@ -243,11 +243,11 @@ class TvdbClient:
             return await response.json()
 
     async def search(
-        self, search_query: str, entity_type: Literal["series", "movie", "all"] = "all", limit: int = 1
+        self, search_query: str, entity_type: Literal["series", "movie", None] = None, limit: int = 1
     ) -> list[Movie | Series]:
         """Search for a series or movie in the TVDB database."""
         query: dict[str, str] = {"query": search_query, "limit": str(limit)}
-        if entity_type != "all":
+        if entity_type:
             query["type"] = entity_type
         data = await self.request("GET", "search", query=query)
         response = SearchGetResponse(**data)  # pyright: ignore[reportCallIssue]

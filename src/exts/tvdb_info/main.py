@@ -126,13 +126,7 @@ class InfoCog(Cog):
                     )
                     return
             else:
-                match entity_type:
-                    case "movie":
-                        response = await client.search(query, limit=5, entity_type="movie")
-                    case "series":
-                        response = await client.search(query, limit=5, entity_type="series")
-                    case None:
-                        response = await client.search(query, limit=5)
+                response = await client.search(query, limit=5, entity_type=entity_type)
                 if not response:
                     await ctx.respond("No results found.")
                     return
