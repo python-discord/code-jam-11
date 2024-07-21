@@ -18,7 +18,7 @@ SERIES_EMOJI = "📺"
 class InfoView(discord.ui.View):
     """View for displaying information about a movie or series."""
 
-    def __init__(self, results: list[Movie | Series]):
+    def __init__(self, results: list[Movie | Series] | list[Movie] | list[Series]) -> None:
         super().__init__(disable_on_timeout=True)
         self.results = results
         self.dropdown = discord.ui.Select(
@@ -87,24 +87,40 @@ class InfoCog(Cog):
         choices=["movie", "series"],
         required=False,
     )
+    @option("by_id", input_type=bool, description="Search by tvdb ID.", required=False)
     async def search(
-        self, ctx: ApplicationContext, query: str, entity_type: Literal["movie", "series"] | None = None
+        self,
+        ctx: ApplicationContext,
+        query: str,
+        entity_type: Literal["movie", "series"] | None = None,
+        by_id: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Search for a movie or series."""
         await ctx.defer()
         async with aiohttp.ClientSession() as session:
             client = TvdbClient(session)
-            match entity_type:
-                case "movie":
-                    response = await client.search(query, limit=5, entity_type="movie")
-                case "series":
-                    response = await client.search(query, limit=5, entity_type="series")
-                case None:
-                    response = await client.search(query, limit=5)
-
-        if not response:
-            await ctx.respond("No results found.")
-            return
+            if by_id:
+                match entity_type:
+                    case "movie":
+                        response = [await Movie.fetch(int(query), client, extended=True)]
+                    case "series":
+                        response = [await Series.fetch(int(query), client, extended=True)]
+                    case None:
+                        await ctx.respond(
+                            "You must specify a type (movie or series) when searching by ID.", ephemeral=True
+                        )
+                        return
+            else:
+                match entity_type:
+                    case "movie":
+                        response = await client.search(query, limit=5, entity_type="movie")
+                    case "series":
+                        response = await client.search(query, limit=5, entity_type="series")
+                    case None:
+                        response = await client.search(query, limit=5)
+                if not response:
+                    await ctx.respond("No results found.")
+                    return
         view = InfoView(response)
         await view.send(ctx)
 

@@ -8,16 +8,14 @@ from src.settings import TVDB_API_KEY
 from src.tvdb.generated_models import (
     MovieBaseRecord,
     MovieExtendedRecord,
+    MoviesIdExtendedGetResponse,
+    MoviesIdGetResponse,
+    SearchGetResponse,
     SearchResult,
     SeriesBaseRecord,
     SeriesExtendedRecord,
-)
-from src.tvdb.models import (
-    MovieExtendedResponse,
-    MovieResponse,
-    SearchResponse,
-    SeriesExtendedResponse,
-    SeriesResponse,
+    SeriesIdExtendedGetResponse,
+    SeriesIdGetResponse,
 )
 from src.utils.log import get_logger
 
@@ -36,7 +34,9 @@ def parse_media_id(media_id: int | str) -> int:
 
 
 class _Media(ABC):
-    def __init__(self, client: "TvdbClient", data: SeriesRecord | MovieRecord | SearchResult):
+    def __init__(self, client: "TvdbClient", data: AnyRecord | SearchResult | None):
+        if data is None:
+            raise ValueError("Data can't be None but is allowed to because of the broken pydantic generated models.")
         self.data = data
         self.client = client
         self.name: str | None = self.data.name
@@ -116,7 +116,7 @@ class Movie(_Media):
         """
         media_id = parse_media_id(media_id)
         response = await client.request("GET", f"movies/{media_id}" + ("/extended" if extended else ""))
-        response = MovieResponse(**response) if not extended else MovieExtendedResponse(**response)  # pyright: ignore[reportCallIssue]
+        response = MoviesIdGetResponse(**response) if not extended else MoviesIdExtendedGetResponse(**response)  # pyright: ignore[reportCallIssue]
         return cls(client, response.data)
 
 
@@ -136,7 +136,7 @@ class Series(_Media):
         """
         media_id = parse_media_id(media_id)
         response = await client.request("GET", f"series/{media_id}" + ("/extended" if extended else ""))
-        response = SeriesResponse(**response) if not extended else SeriesExtendedResponse(**response)  # pyright: ignore[reportCallIssue]
+        response = SeriesIdGetResponse(**response) if not extended else SeriesIdExtendedGetResponse(**response)  # pyright: ignore[reportCallIssue]
         return cls(client, response.data)
 
 
@@ -207,8 +207,19 @@ class TvdbClient:
         if entity_type != "all":
             query["type"] = entity_type
         data = await self.request("GET", "search", query=query)
-        response = SearchResponse(**data)  # pyright: ignore[reportCallIssue]
-        return [Movie(self, result) if result.id[0] == "m" else Series(self, result) for result in response.data]
+        response = SearchGetResponse(**data)  # pyright: ignore[reportCallIssue]
+        if not response.data:
+            raise ValueError("This should not happen.")
+        returnable: list[Movie | Series] = []
+        for result in response.data:
+            match result.type:
+                case "movie":
+                    returnable.append(Movie(self, result))
+                case "series":
+                    returnable.append(Series(self, result))
+                case _:
+                    pass
+        return returnable
 
     async def _login(self) -> None:
         """Obtain the auth token from the TVDB API.
