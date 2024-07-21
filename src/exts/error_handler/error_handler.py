@@ -1,9 +1,10 @@
 import textwrap
 from typing import cast
 
-from discord import Any, ApplicationContext, Bot, Cog, Colour, Embed, errors
+from discord import Any, ApplicationContext, Cog, Colour, Embed, errors
 from discord.ext.commands import errors as commands_errors
 
+from src.bot import Bot
 from src.settings import FAIL_EMOJI, GITHUB_REPO
 from src.utils.log import get_logger
 

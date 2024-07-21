@@ -1,5 +1,6 @@
-from discord import ApplicationContext, Bot, Cog, slash_command
+from discord import ApplicationContext, Cog, slash_command
 
+from src.bot import Bot
 from src.utils.log import get_logger
 
 log = get_logger(__name__)

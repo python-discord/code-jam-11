@@ -1,28 +1,13 @@
 import asyncio
 
+import aiohttp
 import discord
 
+from src.bot import Bot
 from src.settings import BOT_TOKEN
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
-
-EXTENSIONS = [
-    "src.exts.ping",
-    "src.exts.error_handler",
-    "src.exts.sudo",
-    "src.exts.help",
-]
-
-intents = discord.Intents().default()
-intents.message_content = True
-bot = discord.Bot(intents=intents)
-
-
-@bot.event
-async def on_ready() -> None:
-    """Function called once the bot is ready and online."""
-    log.info(f"{bot.user} is ready and online!")
 
 
 async def main() -> None:
@@ -30,12 +15,16 @@ async def main() -> None:
 
     This will load all of the extensions and start the bot.
     """
-    log.info("Loading extensions...")
-    bot.load_extensions(*EXTENSIONS)
+    intents = discord.Intents().default()
+    intents.message_content = True
 
-    log.info("Starting the bot...")
-    async with bot:
-        await bot.start(BOT_TOKEN)
+    async with aiohttp.ClientSession() as http_session:
+        bot = Bot(intents=intents, http_session=http_session)
+        bot.load_all_extensions()
+
+        log.info("Starting the bot...")
+        async with bot as bot_:
+            await bot_.start(BOT_TOKEN)
 
 
 if __name__ == "__main__":

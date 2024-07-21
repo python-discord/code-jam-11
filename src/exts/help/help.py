@@ -1,8 +1,9 @@
 import discord
-from discord import ApplicationContext, Bot, CheckFailure, Cog, SlashCommand, SlashCommandGroup, slash_command
+from discord import ApplicationContext, CheckFailure, Cog, SlashCommand, SlashCommandGroup, slash_command
 from discord.ext.commands import CheckFailure as CommandCheckFailure
 from discord.ext.pages import Page, Paginator
 
+from src.bot import Bot
 from src.utils import mention_command
 from src.utils.cat_api import get_cat_image_url
 from src.utils.log import get_logger
@@ -19,7 +20,7 @@ class HelpCog(Cog):
     @slash_command()
     async def help(self, ctx: ApplicationContext) -> None:
         """Shows help for all available commands."""
-        cat_image_url = await get_cat_image_url()
+        cat_image_url = await get_cat_image_url(self.bot.http_session)
         fields: list[tuple[str, str]] = []
 
         for command in self.bot.commands:

@@ -2,7 +2,6 @@ from typing import cast, override
 
 from discord import (
     ApplicationContext,
-    Bot,
     Cog,
     ExtensionAlreadyLoaded,
     ExtensionNotLoaded,
@@ -12,6 +11,7 @@ from discord import (
 )
 from discord.ext.commands.errors import NotOwner
 
+from src.bot import Bot
 from src.converters.bot_extension import ValidBotExtension
 from src.settings import FAIL_EMOJI, SUCCESS_EMOJI
 
