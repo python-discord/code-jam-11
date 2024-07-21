@@ -168,7 +168,6 @@ max-statements = 75
 ]
 "alembic-migrations/env.py" = [
   "INP001", # Implicit namespace package
-  "ERA001", # Found commented out code
 ]
 "alembic-migrations/versions/*" = [
   "INP001", # Implicit namespace package
