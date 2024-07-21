@@ -19,6 +19,9 @@ py-cord = "^2.6.0"
 python-decouple = "^3.8"
 coloredlogs = "^15.0.1"
 pydantic = "^2.8.2"
+sqlalchemy = { version = "^2.0.31", extras = ["asyncio"] }
+aiosqlite = "^0.20.0"
+alembic = "^1.13.2"
 
 [tool.poetry.group.lint.dependencies]
 ruff = "^0.3.2"
@@ -162,6 +165,15 @@ max-statements = 75
 ]
 ".github/scripts/**.py" = [
   "INP001", # Implicit namespace package
+]
+"alembic-migrations/env.py" = [
+  "INP001", # Implicit namespace package
+]
+"alembic-migrations/versions/*" = [
+  "INP001", # Implicit namespace package
+  "D103",   # Missing docstring in public function
+  "D400",   # First line should end with a period
+  "D415",   # First line should end with a period, question mark, or exclamation point
 ]
 
 [tool.ruff.format]
