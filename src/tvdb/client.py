@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import ClassVar, Literal, final, overload, override
+from enum import Enum
+from typing import ClassVar, Literal, Self, final, overload, override
 
 import aiohttp
 from yarl import URL
@@ -19,6 +20,8 @@ from src.tvdb.generated_models import (
 )
 from src.utils.log import get_logger
 
+from .errors import BadCallError, InvalidApiKeyError
+
 log = get_logger(__name__)
 
 type JSON_DATA = dict[str, JSON_DATA] | list[JSON_DATA] | str | int | float | bool | None  # noice
@@ -28,12 +31,24 @@ type MovieRecord = MovieBaseRecord | MovieExtendedRecord
 type AnyRecord = SeriesRecord | MovieRecord
 
 
+class FetchMeta(Enum):
+    """When calling fetch with extended=True, is used if wanting to fetch translations or episodes as well."""
+
+    TRANSLATIONS = "translations"
+    EPISODES = "episodes"
+
+
 def parse_media_id(media_id: int | str) -> int:
     """Parse the media ID from a string."""
     return int(str(media_id).removeprefix("movie-").removeprefix("series-"))
 
 
 class _Media(ABC):
+    ENDPOINT: ClassVar[str]
+
+    ResponseType: ClassVar[type[MoviesIdGetResponse | SeriesIdGetResponse]]
+    ExtendedResponseType: ClassVar[type[MoviesIdExtendedGetResponse | SeriesIdExtendedGetResponse]]
+
     def __init__(self, client: "TvdbClient", data: AnyRecord | SearchResult | None):
         if data is None:
             raise ValueError("Data can't be None but is allowed to because of the broken pydantic generated models.")
@@ -97,56 +112,79 @@ class _Media(ABC):
 
     @classmethod
     @abstractmethod
-    async def fetch(cls, media_id: int | str, *, client: "TvdbClient", extended: bool = False) -> "_Media": ...
+    def supports_meta(cls, meta: FetchMeta) -> bool:
+        """Check if the class supports a specific meta."""
+        ...
+
+    @classmethod
+    async def fetch(
+        cls: type[Self],
+        media_id: int | str,
+        client: "TvdbClient",
+        *,
+        extended: bool = False,
+        short: bool = True,
+        meta: FetchMeta | None = None,
+    ) -> Self:
+        """Fetch a movie by its ID.
+
+        :param media_id:  The ID of the movie.
+        :param client:  The TVDB client to use.
+        :param extended:  Whether to fetch extended information.
+        :param short:  Whether to omit characters and artworks from the response. Requires extended=True to work.
+        :param meta:  The meta to fetch. Requires extended=True to work.
+        :return:
+        """
+        media_id = parse_media_id(media_id)
+        query: dict[str, str] = {}
+        if extended:
+            if meta:
+                query["meta"] = meta.value
+            if short:
+                query["short"] = "true"
+            else:
+                query["short"] = "false"
+        elif meta:
+            raise BadCallError("Meta can only be used with extended=True.")
+        response = await client.request(
+            "GET",
+            f"{cls.ENDPOINT}/{media_id}" + ("/extended" if extended else ""),
+            query=query if query else None,
+        )
+        response = cls.ResponseType(**response) if not extended else cls.ExtendedResponseType(**response)  # pyright: ignore[reportCallIssue]
+        return cls(client, response.data)
 
 
 @final
 class Movie(_Media):
     """Class to interact with the TVDB API for movies."""
 
+    ENDPOINT: ClassVar[str] = "movies"
+
+    ResponseType = MoviesIdGetResponse
+    ExtendedResponseType = MoviesIdExtendedGetResponse
+
     @override
     @classmethod
-    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: bool = False) -> "Movie":
-        """Fetch a movie by its ID.
-
-        :param media_id:  The ID of the movie.
-        :param client:  The TVDB client to use.
-        :param extended:  Whether to fetch extended information.
-        :return:
-        """
-        media_id = parse_media_id(media_id)
-        response = await client.request("GET", f"movies/{media_id}" + ("/extended" if extended else ""))
-        response = MoviesIdGetResponse(**response) if not extended else MoviesIdExtendedGetResponse(**response)  # pyright: ignore[reportCallIssue]
-        return cls(client, response.data)
+    async def supports_meta(cls, meta: FetchMeta) -> bool:
+        """Check if the class supports a specific meta."""
+        return meta == FetchMeta.TRANSLATIONS
 
 
 @final
 class Series(_Media):
     """Class to interact with the TVDB API for series."""
 
+    ENDPOINT: ClassVar[str] = "series"
+
+    ResponseType = SeriesIdGetResponse
+    ExtendedResponseType = SeriesIdExtendedGetResponse
+
     @override
     @classmethod
-    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: bool = False) -> "Series":
-        """Fetch a series by its ID.
-
-        :param media_id:  The ID of the series.
-        :param client:  The TVDB client to use.
-        :param extended:  Whether to fetch extended information.
-        :return:
-        """
-        media_id = parse_media_id(media_id)
-        response = await client.request("GET", f"series/{media_id}" + ("/extended" if extended else ""))
-        response = SeriesIdGetResponse(**response) if not extended else SeriesIdExtendedGetResponse(**response)  # pyright: ignore[reportCallIssue]
-        return cls(client, response.data)
-
-
-class InvalidApiKeyError(Exception):
-    """Exception raised when the TVDB API key used was invalid."""
-
-    def __init__(self, response: aiohttp.ClientResponse, response_txt: str):
-        self.response = response
-        self.response_txt = response_txt
-        super().__init__("Invalid TVDB API key.")
+    async def supports_meta(cls, meta: FetchMeta) -> bool:
+        """Check if the class supports a specific meta."""
+        return meta in {FetchMeta.TRANSLATIONS, FetchMeta.EPISODES}
 
 
 class TvdbClient:

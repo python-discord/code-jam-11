@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Literal
 
 import aiohttp
@@ -6,7 +7,7 @@ from discord import ApplicationContext, Cog, option, slash_command
 
 from src.bot import Bot
 from src.settings import THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
-from src.tvdb import Movie, Series, TvdbClient
+from src.tvdb import FetchMeta, Movie, Series, TvdbClient
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -18,22 +19,23 @@ SERIES_EMOJI = "📺"
 class InfoView(discord.ui.View):
     """View for displaying information about a movie or series."""
 
-    def __init__(self, results: list[Movie | Series] | list[Movie] | list[Series]) -> None:
+    def __init__(self, results: Sequence[Movie | Series]) -> None:
         super().__init__(disable_on_timeout=True)
         self.results = results
-        self.dropdown = discord.ui.Select(
-            placeholder="Not what you're looking for? Select a different result.",
-            options=[
-                discord.SelectOption(
-                    label=result.bilingual_name or "",
-                    value=str(i),
-                    description=result.overview[:100] if result.overview else None,
-                )
-                for i, result in enumerate(self.results)
-            ],
-        )
-        self.dropdown.callback = self._dropdown_callback
-        self.add_item(self.dropdown)
+        if len(self.results) > 1:
+            self.dropdown = discord.ui.Select(
+                placeholder="Not what you're looking for? Select a different result.",
+                options=[
+                    discord.SelectOption(
+                        label=result.bilingual_name or "",
+                        value=str(i),
+                        description=result.overview[:100] if result.overview else None,
+                    )
+                    for i, result in enumerate(self.results)
+                ],
+            )
+            self.dropdown.callback = self._dropdown_callback
+            self.add_item(self.dropdown)
         self.index = 0
 
     def _get_embed(self) -> discord.Embed:
@@ -102,9 +104,9 @@ class InfoCog(Cog):
             if by_id:
                 match entity_type:
                     case "movie":
-                        response = [await Movie.fetch(int(query), client, extended=True)]
+                        response = [await Movie.fetch(int(query), client, extended=True, meta=FetchMeta.TRANSLATIONS)]
                     case "series":
-                        response = [await Series.fetch(int(query), client, extended=True)]
+                        response = [await Series.fetch(int(query), client, extended=True, meta=FetchMeta.TRANSLATIONS)]
                     case None:
                         await ctx.respond(
                             "You must specify a type (movie or series) when searching by ID.", ephemeral=True

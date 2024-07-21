@@ -1,8 +1,4 @@
-from .client import InvalidApiKeyError, Movie, Series, TvdbClient
+from .client import FetchMeta, Movie, Series, TvdbClient
+from .errors import InvalidApiKeyError
 
-__all__ = [
-    "TvdbClient",
-    "InvalidApiKeyError",
-    "Movie",
-    "Series",
-]
+__all__ = ["TvdbClient", "InvalidApiKeyError", "Movie", "Series", "FetchMeta"]
