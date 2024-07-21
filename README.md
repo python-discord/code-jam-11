@@ -29,7 +29,7 @@ The project also supports [docker](https://www.docker.com/) installation, which 
 anywhere, without installing all of the dependencies manually. This is a lot more convenient way to run the bot, if you
 just want to run it and you don't wish to do any actual development.
 
-To use docker, you can check out the images that are automatically built after each update to the `main` branch on
+To use docker, you can check out the images that are automatically built after each update to the `main` branch at
 [ghcr](https://github.com/itsdrike/code-jam-2024/pkgs/container/code-jam-2024). You can also use [`docker
 compose`](https://docs.docker.com/compose/) with the [`docker-compose.yaml`](./docker-compose.yaml) file, which will
 pull this image from ghcr. To run the container using this file, you can use the following command:
@@ -38,8 +38,11 @@ pull this image from ghcr. To run the container using this file, you can use the
 docker compose up
 ```
 
+> [!TIP]
+> To run the container in the background, add the `-d` flag to the command.
+
 If you want to build the image locally (to include some other changes that aren't yet in the main branch, maybe during
-development or to customize something when deploying), you can also use the
+development or to customize something when deploying), you can also use
 [`docker-compose.local.yaml`](./docker-compose.local.yaml), which defines an image building step from our
 [`Dockerfile`](./Dockerfile). To run this local version of docker-compose, you can use the following command:
 
@@ -47,8 +50,9 @@ development or to customize something when deploying), you can also use the
 docker compose -f ./docker-compose.local.yaml up
 ```
 
-Note that you will still need to create a `.env` file with all of the configuration variables (see [the configuring
-section](#configuring-the-bot)
+> [!IMPORTANT]
+> Note that you will still need to create a `.env` file with all of the configuration variables (see [the configuring
+> section](#configuring-the-bot)
 
 ## Configuring the bot
 
