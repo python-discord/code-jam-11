@@ -14,13 +14,11 @@ log = get_logger(__name__)
 
 __all__ = ["engine", "Base", "load_db_models", "get_db_session"]
 
+SQLALCHEMY_URL = f"sqlite+aiosqlite:///{SQLITE_DATABASE_FILE.absolute()}"
 TABLES_PACKAGE_PATH = "src.db_tables"
 
 
-engine = create_async_engine(
-    f"sqlite+aiosqlite:///{SQLITE_DATABASE_FILE.absolute()}",
-    echo=ECHO_SQL,
-)
+engine = create_async_engine(SQLALCHEMY_URL, echo=ECHO_SQL)
 
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
