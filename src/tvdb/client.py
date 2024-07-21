@@ -48,8 +48,7 @@ class _Media(ABC):
         self.slug: str | None = None
         if hasattr(self.data, "slug"):
             self.slug = self.data.slug
-        if hasattr(self.data, "id"):
-            self.id = self.data.id
+        self.id = self.data.id
 
         self.name_eng: str | None = None
         self.overview_eng: str | None = None
