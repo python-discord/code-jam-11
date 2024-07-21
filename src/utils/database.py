@@ -4,6 +4,11 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import NoReturn
 
+import alembic.config
+from alembic.runtime.environment import EnvironmentContext
+from alembic.runtime.migration import MigrationContext, RevisionStep
+from alembic.script import ScriptDirectory
+from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -55,6 +60,58 @@ def load_db_models() -> None:
 
         log.debug(f"Loading database module: {module_info.name}")
         importlib.import_module(module_info.name)
+
+
+def apply_db_migrations(db_conn: Connection) -> None:
+    """Apply alembic database migrations.
+
+    This method will first check if the database is empty (no applied alembic revisions),
+    in which case, it use SQLAlchemy to create all tables and then stamp the database for alembic.
+
+    If the database is not empty, it will apply all necessary migrations, bringing the database
+    up to date with the latest revision.
+    """
+    # Create a standalone minimal config, that doesn't use alembic.ini
+    # (we don't want to load env.py, since they do a lot of things we don't want
+    # like setting up logging in a different way, ...)
+    alembic_cfg = alembic.config.Config()
+    alembic_cfg.set_main_option("script_location", "alembic-migrations")
+    alembic_cfg.set_main_option("sqlalchemy.url", SQLALCHEMY_URL)
+
+    script = ScriptDirectory.from_config(alembic_cfg)
+
+    def retrieve_migrations(rev: str, context: MigrationContext) -> list[RevisionStep]:
+        """Retrieve all remaining migrations to be applied to get to "head".
+
+        The returned migrations will be the migrations that will get applied when upgrading.
+        """
+        migrations = script._upgrade_revs("head", rev)  # pyright: ignore[reportPrivateUsage]
+
+        if len(migrations) > 0:
+            log.info(f"Applying {len(migrations)} database migrations")
+        else:
+            log.debug("No database migrations to apply, database is up to date")
+
+        return migrations
+
+    env_context = EnvironmentContext(alembic_cfg, script)
+    env_context.configure(connection=db_conn, target_metadata=Base.metadata, fn=retrieve_migrations)
+    context = env_context.get_context()
+
+    current_rev = context.get_current_revision()
+
+    # If there is no current revision, this is a brand new database
+    # instead of going through the migrations, we can instead use metadata.create_all
+    # to create all tables and then stamp the database with the head revision.
+    if current_rev is None:
+        log.info("Performing initial database setup (creating tables)")
+        Base.metadata.create_all(db_conn)
+        context.stamp(script, "head")
+        return
+
+    log.debug("Checking for database migrations")
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 @asynccontextmanager

@@ -5,7 +5,7 @@ import discord
 
 from src.bot import Bot
 from src.settings import BOT_TOKEN, SQLITE_DATABASE_FILE
-from src.utils.database import Base, engine, get_db_session, load_db_models
+from src.utils.database import apply_db_migrations, engine, get_db_session, load_db_models
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -24,12 +24,13 @@ async def _init_database(*, retries: int = 5, retry_time: float = 3) -> None:
     for _ in range(retries):
         log.debug(f"Connecting to the database: {SQLITE_DATABASE_FILE}")
         try:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
+            conn = engine.connect()
         except ConnectionRefusedError as exc:
             log.exception(f"Database connection failed, retrying in {retry_time} seconds.", exc_info=exc)
             await asyncio.sleep(retry_time)
         else:
+            async with conn, conn.begin():
+                await conn.run_sync(apply_db_migrations)
             break
 
     log.debug("Database connection established")

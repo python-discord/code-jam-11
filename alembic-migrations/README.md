@@ -26,7 +26,12 @@ in case someone needs to test out an older version of the bot).
 ## How to use these migrations?
 
 We're using [`alembic`](https://alembic.sqlalchemy.org/en/latest/index.html), which is a tool that makes generating and
-applying migrations very easy. If you just wish to get your application up-to-date, all you need to do is run:
+applying migrations very easy. Additionally, we have some custom logic in place, to make sure that all migrations that
+weren't yet applied will automatically be ran once the application is started, so you don't actually need to do
+anything to apply them.
+
+That said, if you would want to apply the migrations manually, without having to start the bot first, you can do so
+with the command below:
 
 ```bash
 alembic upgrade head
@@ -64,8 +69,5 @@ migration file, that you'll need to fill out.
 
 That said, in vast majority of cases, you will not need to write your migrations manually. For more info on when you
 might need to, check [the documentation][alembic-autogeneration-autodetection].
-
-> [!IMPORTANT]
-> After generating a migration, don't forget to also apply it yourself (`alembic upgrade head`).
 
 [alembic-autogeneration-autodetection]: https://guide.pycord.dev/getting-started/creating-your-first-bot#creating-the-bot-application
