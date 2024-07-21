@@ -192,6 +192,8 @@ def _setup_external_log_levels(root_log: LoggerClass) -> None:
     set explicitly here, avoiding unneeded spammy logs.
     """
     get_logger("asyncio").setLevel(logging.INFO)
+    get_logger("discord.http").setLevel(logging.INFO)
+    get_logger("discord.gateway").setLevel(logging.WARNING)
     get_logger("aiosqlite").setLevel(logging.INFO)
     get_logger("alembic.runtime.migration").setLevel(logging.WARNING)
 
