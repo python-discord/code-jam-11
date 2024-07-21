@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Literal
 
 import aiohttp
@@ -6,7 +7,8 @@ from discord import ApplicationContext, Cog, option, slash_command
 
 from src.bot import Bot
 from src.settings import THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
-from src.tvdb import Movie, Series, TvdbClient
+from src.tvdb import FetchMeta, Movie, Series, TvdbClient
+from src.tvdb.errors import InvalidIdError
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -18,22 +20,23 @@ SERIES_EMOJI = "📺"
 class InfoView(discord.ui.View):
     """View for displaying information about a movie or series."""
 
-    def __init__(self, results: list[Movie | Series]):
+    def __init__(self, results: Sequence[Movie | Series]) -> None:
         super().__init__(disable_on_timeout=True)
         self.results = results
-        self.dropdown = discord.ui.Select(
-            placeholder="Not what you're looking for? Select a different result.",
-            options=[
-                discord.SelectOption(
-                    label=result.bilingual_name or "",
-                    value=str(i),
-                    description=result.overview[:100] if result.overview else None,
-                )
-                for i, result in enumerate(self.results)
-            ],
-        )
-        self.dropdown.callback = self._dropdown_callback
-        self.add_item(self.dropdown)
+        if len(self.results) > 1:
+            self.dropdown = discord.ui.Select(
+                placeholder="Not what you're looking for? Select a different result.",
+                options=[
+                    discord.SelectOption(
+                        label=result.bilingual_name or "",
+                        value=str(i),
+                        description=result.overview[:100] if result.overview else None,
+                    )
+                    for i, result in enumerate(self.results)
+                ],
+            )
+            self.dropdown.callback = self._dropdown_callback
+            self.add_item(self.dropdown)
         self.index = 0
 
     def _get_embed(self) -> discord.Embed:
@@ -87,24 +90,48 @@ class InfoCog(Cog):
         choices=["movie", "series"],
         required=False,
     )
+    @option("by_id", input_type=bool, description="Search by tvdb ID.", required=False)
     async def search(
-        self, ctx: ApplicationContext, query: str, entity_type: Literal["movie", "series"] | None = None
+        self,
+        ctx: ApplicationContext,
+        *,
+        query: str,
+        entity_type: Literal["movie", "series"] | None = None,
+        by_id: bool = False,
     ) -> None:
         """Search for a movie or series."""
         await ctx.defer()
         async with aiohttp.ClientSession() as session:
             client = TvdbClient(session)
-            match entity_type:
-                case "movie":
-                    response = await client.search(query, limit=5, entity_type="movie")
-                case "series":
-                    response = await client.search(query, limit=5, entity_type="series")
-                case None:
-                    response = await client.search(query, limit=5)
-
-        if not response:
-            await ctx.respond("No results found.")
-            return
+            if by_id:
+                if query.startswith("movie-"):
+                    entity_type = "movie"
+                    query = query[6:]
+                elif query.startswith("series-"):
+                    entity_type = "series"
+                    query = query[7:]
+                try:
+                    match entity_type:
+                        case "movie":
+                            response = [await Movie.fetch(query, client, extended=True, meta=FetchMeta.TRANSLATIONS)]
+                        case "series":
+                            response = [await Series.fetch(query, client, extended=True, meta=FetchMeta.TRANSLATIONS)]
+                        case None:
+                            await ctx.respond(
+                                "You must specify a type (movie or series) when searching by ID.", ephemeral=True
+                            )
+                            return
+                except InvalidIdError:
+                    await ctx.respond(
+                        'Invalid ID. Id must be an integer, or "movie-" / "series-" followed by an integer.',
+                        ephemeral=True,
+                    )
+                    return
+            else:
+                response = await client.search(query, limit=5, entity_type=entity_type)
+                if not response:
+                    await ctx.respond("No results found.")
+                    return
         view = InfoView(response)
         await view.send(ctx)
 
