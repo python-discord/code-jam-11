@@ -122,13 +122,37 @@ class _Media(ABC):
         ...
 
     @classmethod
+    @overload
+    async def fetch(
+        cls,
+        media_id: int | str,
+        client: "TvdbClient",
+        *,
+        extended: Literal[False],
+        short: Literal[False] | None = None,
+        meta: None = None,
+    ) -> Self: ...
+
+    @classmethod
+    @overload
+    async def fetch(
+        cls,
+        media_id: int | str,
+        client: "TvdbClient",
+        *,
+        extended: Literal[True],
+        short: bool | None = None,
+        meta: FetchMeta | None = None,
+    ) -> Self: ...
+
+    @classmethod
     async def fetch(
         cls,
         media_id: int | str,
         client: "TvdbClient",
         *,
         extended: bool = False,
-        short: bool = True,
+        short: bool | None = None,
         meta: FetchMeta | None = None,
     ) -> Self:
         """Fetch a movie by its ID.
@@ -151,6 +175,8 @@ class _Media(ABC):
                 query["short"] = "false"
         elif meta:
             raise BadCallError("Meta can only be used with extended=True.")
+        elif short:
+            raise BadCallError("Short can only be enabled with extended=True.")
         response = await client.request(
             "GET",
             f"{cls.ENDPOINT}/{media_id}" + ("/extended" if extended else ""),

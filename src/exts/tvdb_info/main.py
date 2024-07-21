@@ -122,7 +122,8 @@ class InfoCog(Cog):
                             return
                 except InvalidIdError:
                     await ctx.respond(
-                        'Invalid ID. Id must be an integer, or "movie-" / "series-" followed by an integer.'
+                        'Invalid ID. Id must be an integer, or "movie-" / "series-" followed by an integer.',
+                        ephemeral=True,
                     )
                     return
             else:
