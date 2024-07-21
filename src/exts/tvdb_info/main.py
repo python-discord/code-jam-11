@@ -94,9 +94,10 @@ class InfoCog(Cog):
     async def search(
         self,
         ctx: ApplicationContext,
+        *,
         query: str,
         entity_type: Literal["movie", "series"] | None = None,
-        by_id: bool = False,  # noqa: FBT001, FBT002
+        by_id: bool = False,
     ) -> None:
         """Search for a movie or series."""
         await ctx.defer()
