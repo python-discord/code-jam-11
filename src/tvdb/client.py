@@ -277,9 +277,9 @@ class TvdbClient:
             query["type"] = entity_type
         data = await self.request("GET", "search", query=query)
         response = SearchGetResponse(**data)  # pyright: ignore[reportCallIssue]
-        if not response.data:
-            raise ValueError("This should not happen.")
         returnable: list[Movie | Series] = []
+        if not response.data:
+            return returnable
         for result in response.data:
             match result.type:
                 case "movie":
