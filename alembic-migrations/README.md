@@ -48,15 +48,23 @@ this). That way, alembic will always know what version is your current database 
 ## How to create migrations? (for developers)
 
 If you're adding a new database table, deleting it, or just changing it somehow, you will want to create a new
-migration file for it. Thankfully, alembic makes this very easy too. All you need to do is run:
+migration file for it. Thankfully, alembic makes this very easy. All you need to do is run:
 
 ```bash
 alembic revision --autogenerate -m "Some message (e.g.: Added users table)"
 ```
 
-In most cases, this will be all that you need to do, alembic will automatically up any changes you made in the python
-code, recognize what to do to get the existing database up to date with them and create the migration file with
-instructions for it.
+Alembic will actually load the python classes that represent all of the tables and compare that with what you currently
+have in the database, automatically generating all of the instructions that need to be ran in a new migration script.
+This script will be stored in `alembic-migrations/versions/` directory.
+
+Note that after you did this, you will want to apply the migrations. You can do that by simply running the bot for a
+while, to let the custom logic we have in place run alembic migrations for you, or you can run them manually with
+`alembic upgrade head`.
+
+### Manual migrations
+
+In most cases, running the command to auto-generate the migration will be all that you need to do.
 
 That said, alembic has it's limitations and in some cases, the automatic generation doesn't work, or doesn't do what
 we'd like it to do. For example, if you rename a table, alembic can't understand that this was a rename, rather than a
