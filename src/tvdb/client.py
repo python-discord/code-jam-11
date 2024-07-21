@@ -123,7 +123,7 @@ class _Media(ABC):
 
     @classmethod
     async def fetch(
-        cls: type[Self],
+        cls,
         media_id: int | str,
         client: "TvdbClient",
         *,
