@@ -90,15 +90,12 @@ class _Media(ABC):
         return f"{self.name} ({self.name_eng})"
 
     @property
-    def id(self) -> int | str | None:
+    def id(self) -> int:
         return self._id
 
     @id.setter
-    def id(self, value: int | str | None) -> None:
-        if value:
-            self._id = int(str(value).split("-")[1])
-        else:
-            self._id = None
+    def id(self, value: int | str) -> None:  # pyright: ignore[reportPropertyTypeMismatch]
+        self._id = parse_media_id(value)
 
     @classmethod
     @abstractmethod

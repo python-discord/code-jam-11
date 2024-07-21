@@ -476,7 +476,7 @@ class ListBaseRecord(BaseModel):
 
 class MovieBaseRecord(BaseModel):
     aliases: list[Alias] | None = Field(default=None, json_schema_extra={"x-go-name": "Aliases"})
-    id: int | None = Field(default=None, json_schema_extra={"x-go-name": "ID"})
+    id: int = Field(json_schema_extra={"x-go-name": "ID"})
     image: str | None = Field(default=None, json_schema_extra={"x-go-name": "Image"})
     last_updated: str | None = Field(default=None, alias="lastUpdated")
     name: str | None = Field(default=None, json_schema_extra={"x-go-name": "Name"})
@@ -633,7 +633,7 @@ class MovieExtendedRecord(BaseModel):
     content_ratings: list[ContentRating] | None = Field(default=None, alias="contentRatings")
     first_release: Release | None = None
     genres: list[GenreBaseRecord] | None = Field(default=None, json_schema_extra={"x-go-name": "Genres"})
-    id: int | None = Field(default=None, json_schema_extra={"x-go-name": "ID"})
+    id: int = Field(json_schema_extra={"x-go-name": "ID"})
     image: str | None = Field(default=None, json_schema_extra={"x-go-name": "Image"})
     inspirations: list[Inspiration] | None = Field(default=None, json_schema_extra={"x-go-name": "Inspirations"})
     last_updated: str | None = Field(default=None, alias="lastUpdated")
@@ -778,7 +778,7 @@ class SeriesBaseRecord(BaseModel):
     )
     episodes: list[EpisodeBaseRecord] | None = Field(default=None, json_schema_extra={"x-go-name": "Episodes"})
     first_aired: str | None = Field(default=None, alias="firstAired")
-    id: int | None = None
+    id: int
     image: str | None = None
     is_order_randomized: bool | None = Field(
         default=None,
@@ -826,7 +826,7 @@ class SeriesExtendedRecord(BaseModel):
     first_aired: str | None = Field(default=None, alias="firstAired")
     lists: list[ListBaseRecord] | None = None
     genres: list[GenreBaseRecord] | None = Field(default=None, json_schema_extra={"x-go-name": "Genres"})
-    id: int | None = None
+    id: int
     image: str | None = None
     is_order_randomized: bool | None = Field(
         default=None,

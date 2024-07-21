@@ -59,12 +59,10 @@ class InfoView(discord.ui.View):
 
     async def _dropdown_callback(self, interaction: discord.Interaction) -> None:
         if not self.dropdown.values or not isinstance(self.dropdown.values[0], str):
-            log.error("Dropdown values are empty or not a string but callback was triggered.")
-            return
+            raise ValueError("Dropdown values are empty or not a string but callback was triggered.")
         self.index = int(self.dropdown.values[0])
         if not self.message:
-            log.error("Message is not set but callback was triggered.")
-            return
+            raise ValueError("Message is not set but callback was triggered.")
         await self.message.edit(embed=self._get_embed(), view=self)
         await interaction.response.defer()
 
@@ -79,10 +77,7 @@ class InfoCog(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    @slash_command(
-        name="search",
-        description="Search for a movie or series.",
-    )
+    @slash_command()
     @option("query", input_type=str, description="The query to search for.")
     @option(
         "type",
