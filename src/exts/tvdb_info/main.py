@@ -6,8 +6,7 @@ from discord import ApplicationContext, Cog, option, slash_command
 
 from src.bot import Bot
 from src.settings import THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
-from src.tvdb import TvdbClient
-from src.tvdb.models import SearchResults
+from src.tvdb import Movie, Series, TvdbClient
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -19,14 +18,14 @@ SERIES_EMOJI = "📺"
 class InfoView(discord.ui.View):
     """View for displaying information about a movie or series."""
 
-    def __init__(self, results: SearchResults):
+    def __init__(self, results: list[Movie | Series]):
         super().__init__(disable_on_timeout=True)
-        self.results: SearchResults = results
+        self.results = results
         self.dropdown = discord.ui.Select(
             placeholder="Not what you're looking for? Select a different result.",
             options=[
                 discord.SelectOption(
-                    label=result.name or result.title or "",
+                    label=result.bilingual_name or "",
                     value=str(i),
                     description=result.overview[:100] if result.overview else None,
                 )
@@ -39,21 +38,14 @@ class InfoView(discord.ui.View):
 
     def _get_embed(self) -> discord.Embed:
         result = self.results[self.index]
-        original_title = result.name
-        en_title = result.translations["eng"]
-        original_overview = result.overview
-        en_overview = result.overviews["eng"]
-        if en_overview and en_overview != original_overview:
-            overview = f"{en_overview}"
-        elif not en_overview and original_overview:
-            overview = f"{original_overview}\n\n*No English overview available.*"
+        if result.overview_eng:
+            overview = f"{result.overview_eng}"
+        elif not result.overview_eng and result.overview:
+            overview = f"{result.overview}\n\n*No English overview available.*"
         else:
             overview = "*No overview available.*"
-        if original_title and original_title != en_title:
-            title = f"{original_title} ({en_title})"
-        else:
-            title = en_title
-        if result.id[0] == "m":
+        title = result.bilingual_name
+        if result.entity_type == "Movie":
             title = f"{MOVIE_EMOJI} {title}"
             url = f"https://www.thetvdb.com/movies/{result.slug}"
         else:
@@ -109,9 +101,9 @@ class InfoCog(Cog):
             client = TvdbClient(session)
             match entity_type:
                 case "movie":
-                    response = await client.movies.search(query, limit=5)
+                    response = await client.search(query, limit=5, entity_type="movie")
                 case "series":
-                    response = await client.series.search(query, limit=5)
+                    response = await client.search(query, limit=5, entity_type="series")
                 case None:
                     response = await client.search(query, limit=5)
 

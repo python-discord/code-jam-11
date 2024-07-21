@@ -44,7 +44,7 @@ class SeriesExtendedResponse(_Response):
     data: SeriesExtendedRecord
 
 
-class MoviesExtendedResponse(_Response):
+class MovieExtendedResponse(_Response):
     """Model for the response of the movies/{id}/extended endpoint of the TVDB API."""
 
     data: MovieExtendedRecord

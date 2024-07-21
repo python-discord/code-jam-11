@@ -1,6 +1,8 @@
-from .client import InvalidApiKeyError, TvdbClient
+from .client import InvalidApiKeyError, Movie, Series, TvdbClient
 
 __all__ = [
     "TvdbClient",
     "InvalidApiKeyError",
+    "Movie",
+    "Series",
 ]

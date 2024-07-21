@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Literal, overload, override
+from typing import ClassVar, Literal, overload, override
 
 import aiohttp
 from yarl import URL
@@ -12,94 +12,149 @@ from src.tvdb.generated_models import (
     SeriesBaseRecord,
     SeriesExtendedRecord,
 )
-from src.tvdb.models import MovieResponse, SearchResponse, SeriesResponse
+from src.tvdb.models import (
+    MovieExtendedResponse,
+    MovieResponse,
+    SearchResponse,
+    SeriesExtendedResponse,
+    SeriesResponse,
+)
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
 
 type JSON_DATA = dict[str, JSON_DATA] | list[JSON_DATA] | str | int | float | bool | None  # noice
 
+type SeriesRecord = SeriesBaseRecord | SeriesExtendedRecord
+type MovieRecord = MovieBaseRecord | MovieExtendedRecord
+type AnyRecord = SeriesRecord | MovieRecord
+
+
+def parse_media_id(media_id: int | str) -> int:
+    """Parse the media ID from a string."""
+    return int(str(media_id).removeprefix("movie-").removeprefix("series-"))
+
 
 class _Media(ABC):
-    def __init__(self, client: "TvdbClient"):
+    def __init__(self, client: "TvdbClient", data: SeriesRecord | MovieRecord | SearchResult):
+        self.data = data
         self.client = client
-        self._id: int | None = None
+        self.name: str | None = self.data.name
+        self.overview: str | None = None
+        # if the class name is "Movie" or "Series"
+        self.entity_type: Literal["Movie", "Series"] = self.__class__.__name__  # pyright: ignore [reportAttributeAccessIssue]
+        if hasattr(self.data, "overview"):
+            self.overview = self.data.overview  # pyright: ignore [reportAttributeAccessIssue]
+        self.slug: str | None = None
+        if hasattr(self.data, "slug"):
+            self.slug = self.data.slug
+        if hasattr(self.data, "id"):
+            self.id = self.data.id
+
+        self.name_eng: str | None = None
+        self.overview_eng: str | None = None
+
+        self.image_url: URL | None = None
+        if isinstance(self.data, SearchResult) and self.data.image_url:
+            self.image_url = URL(self.data.image_url)
+        # that not isn't needed but is there for clarity and for pyright
+        elif not isinstance(self.data, SearchResult) and self.data.image:
+            self.image_url = URL(self.data.image)
+
+        if isinstance(self.data, SearchResult):
+            if self.data.translations and self.data.translations.root:
+                self.name_eng = self.data.translations.root.get("eng")
+            if self.data.overviews and self.data.overviews.root:
+                self.overview_eng = self.data.overviews.root.get("eng")
+        else:
+            if self.data.aliases:
+                self.name_eng = next(alias for alias in self.data.aliases if alias.language == "eng").name
+            if isinstance(self.data, (SeriesExtendedRecord, MovieExtendedRecord)) and self.data.translations:
+                if self.data.translations.name_translations:
+                    self.name_eng = next(
+                        translation.name
+                        for translation in self.data.translations.name_translations
+                        if translation.language == "eng"
+                    )
+                if self.data.translations.overview_translations:
+                    self.overview_eng = next(
+                        translation.overview
+                        for translation in self.data.translations.overview_translations
+                        if translation.language == "eng"
+                    )
+
+    @property
+    def bilingual_name(self) -> str | None:
+        if self.name == self.name_eng:
+            return self.name
+        return f"{self.name} ({self.name_eng})"
 
     @property
     def id(self) -> int | str | None:
         return self._id
 
     @id.setter
-    def id(self, value: int | str) -> None:
-        self._id = int(str(value).split("-")[1])
+    def id(self, value: int | str | None) -> None:
+        if value:
+            self._id = int(str(value).split("-")[1])
+        else:
+            self._id = None
 
-    def __call__(self, media_id: str) -> "_Media":
-        self.id = media_id
-        return self
-
+    @classmethod
     @abstractmethod
-    async def search(self, search_query: str, limit: int = 1) -> list[Any]: ...
+    async def fetch(cls, media_id: int | str, *, client: "TvdbClient", extended: bool = False) -> "_Media": ...
 
-    @abstractmethod
-    async def fetch(self, *, extended: bool = False) -> Any: ...
+
+class Movie(_Media):
+    """Class to interact with the TVDB API for movies."""
+
+    @overload
+    @classmethod
+    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: Literal[False]) -> "Movie": ...
+    @overload
+    @classmethod
+    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: Literal[True]) -> "Movie": ...
+
+    @override
+    @classmethod
+    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: bool = False) -> "Movie":
+        """Fetch a movie by its ID.
+
+        :param media_id:  The ID of the movie.
+        :param client:  The TVDB client to use.
+        :param extended:  Whether to fetch extended information.
+        :return:
+        """
+        media_id = parse_media_id(media_id)
+        response = await client.request("GET", f"movies/{media_id}" + ("/extended" if extended else ""))
+        response = MovieResponse(**response) if not extended else MovieExtendedResponse(**response)  # pyright: ignore[reportCallIssue]
+        return cls(client, response.data)
 
 
 class Series(_Media):
     """Class to interact with the TVDB API for series."""
 
-    @override
-    async def search(self, search_query: str, limit: int = 1) -> list[SearchResult]:
-        """Search for a series in the TVDB database.
-
-        :param search_query:
-        :param limit:
-        :return:
-        """
-        return await self.client.search(search_query, "series", limit)
-
     @overload
-    async def fetch(self, *, extended: Literal[False]) -> SeriesBaseRecord: ...
-
+    @classmethod
+    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: Literal[False]) -> "Series": ...
     @overload
-    async def fetch(self, *, extended: Literal[True]) -> SeriesExtendedRecord: ...
+    @classmethod
+    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: Literal[True]) -> "Series": ...
 
     @override
-    async def fetch(self, *, extended: bool = False) -> SeriesBaseRecord | SeriesExtendedRecord:
+    @classmethod
+    async def fetch(cls, media_id: int | str, client: "TvdbClient", *, extended: bool = False) -> "Series":
         """Fetch a series by its ID.
 
-        :param extended:
-        :return:
-        """
-        data = await self.client.request("GET", f"series/{self.id}" + ("/extended" if extended else ""))
-        return SeriesResponse(**data).data  # pyright: ignore[reportCallIssue]
-
-
-class Movies(_Media):
-    """Class to interact with the TVDB API for movies."""
-
-    @override
-    async def search(self, search_query: str, limit: int = 1) -> list[SearchResult]:
-        """Search for a movie in the TVDB database.
-
-        :param search_query:
-        :param limit:
-        :return: list[SearchResult]
-        """
-        return await self.client.search(search_query, "movie", limit)
-
-    @overload
-    async def fetch(self, *, extended: Literal[False]) -> MovieBaseRecord: ...
-    @overload
-    async def fetch(self, *, extended: Literal[True]) -> MovieExtendedRecord: ...
-    @override
-    async def fetch(self, *, extended: bool = False) -> MovieBaseRecord | MovieExtendedRecord:
-        """Fetch a movie by its ID.
-
+        :param media_id:  The ID of the series.
+        :param client:  The TVDB client to use.
         :param extended:  Whether to fetch extended information.
         :return:
         """
-        data = await self.client.request("GET", f"movies/{self.id}" + ("/extended" if extended else ""))
-        return MovieResponse(**data).data  # pyright: ignore[reportCallIssue]
+        media_id = parse_media_id(media_id)
+        response = await client.request("GET", f"series/{media_id}" + ("/extended" if extended else ""))
+        response = SeriesResponse(**response) if not extended else SeriesExtendedResponse(**response)  # pyright: ignore[reportCallIssue]
+        return cls(client, response.data)
 
 
 class InvalidApiKeyError(Exception):
@@ -119,8 +174,6 @@ class TvdbClient:
     def __init__(self, http_session: aiohttp.ClientSession):
         self.http_session = http_session
         self.auth_token = None
-        self.series = Series(self)
-        self.movies = Movies(self)
 
     @overload
     async def request(
@@ -165,14 +218,14 @@ class TvdbClient:
 
     async def search(
         self, search_query: str, entity_type: Literal["series", "movie", "all"] = "all", limit: int = 1
-    ) -> list[SearchResult]:
+    ) -> list[Movie | Series]:
         """Search for a series or movie in the TVDB database."""
         query: dict[str, str] = {"query": search_query, "limit": str(limit)}
         if entity_type != "all":
             query["type"] = entity_type
         data = await self.request("GET", "search", query=query)
         response = SearchResponse(**data)  # pyright: ignore[reportCallIssue]
-        return response.data
+        return [Movie(self, result) if result.id[0] == "m" else Series(self, result) for result in response.data]
 
     async def _login(self) -> None:
         """Obtain the auth token from the TVDB API.
