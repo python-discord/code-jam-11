@@ -7,7 +7,10 @@ from ecosystem import EcosystemManager
 
 
 async def run_discord_bot():
+    loop = asyncio.get_event_loop()
+
     client = EcoCordClient()
+
     await client.start_ecosystem()
 
     gif_task = asyncio.create_task(client.send_gifs())
@@ -18,6 +21,8 @@ async def run_discord_bot():
         await client.stop_ecosystem()
         gif_task.cancel()
         await client.close()
+    finally:
+        await loop.shutdown_asyncgens()
 
 
 def run_gif_generator(duration=None):
@@ -30,7 +35,7 @@ def run_gif_generator(duration=None):
             gif_data = manager.get_latest_gif()
             if gif_data:
                 yield gif_data
-            time.sleep(1)
+            time.sleep(0.01)
     finally:
         manager.stop()
 

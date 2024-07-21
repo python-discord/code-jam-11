@@ -1,9 +1,12 @@
 import contextlib
+import io
+import multiprocessing
 import threading
 import time
-from collections import deque
-from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
+
+import numpy as np
 
 # Hide pygame welcome message
 with contextlib.redirect_stdout(None):
@@ -20,7 +23,7 @@ from .snake import Snake
 
 
 class Ecosystem:
-    def __init__(self, width, height, generate_gifs=False, gif_interval=5, gif_duration=5, fps=30):
+    def __init__(self, width, height, generate_gifs=False, gif_duration=5, fps=30):
         self.width = width
         self.height = height
         self.activity = 1
@@ -50,17 +53,28 @@ class Ecosystem:
         self.reset_button = None
         self.setup_ui()
 
-        # GIF generation attributes
         self.generate_gifs = generate_gifs
-        self.gif_interval = gif_interval
-        self.gif_duration = gif_duration
         self.fps = fps
-        if generate_gifs:
-            self.frame_queue = deque(maxlen=fps * gif_duration)
-            self.gif_queue = Queue()
-            self.gif_dir = "ecosystem_gifs"
-            Path(self.gif_dir).mkdir(exist_ok=True)
-            self.last_gif_time = 0
+
+        if self.generate_gifs:
+            self.gif_duration = gif_duration
+            self.frames_per_gif = self.fps * self.gif_duration
+            self.frame_count = 0
+            self.shared_frames = SharedNumpyArray((self.frames_per_gif, width, height, 3))
+            self.current_frame_index = multiprocessing.Value("i", 0)
+            self.frame_count_queue = multiprocessing.Queue()
+            self.gif_info_queue = multiprocessing.Queue()
+            self.gif_process = multiprocessing.Process(
+                target=self._gif_generation_process,
+                args=(
+                    self.shared_frames,
+                    self.current_frame_index,
+                    self.frame_count_queue,
+                    self.gif_info_queue,
+                    self.fps,
+                ),
+            )
+            self.gif_process.start()
 
     def setup_ui(self):
         button_width = 120
@@ -160,13 +174,6 @@ class Ecosystem:
         self.snakes = [snake for snake in self.snakes if snake.alive]
         self.birds = [bird for bird in self.birds if bird.alive]
 
-        if self.generate_gifs:
-            self.frame_queue.append(pygame.image.tostring(self.surface, "RGB"))
-            current_time = time.time()
-            if current_time - self.last_gif_time >= self.gif_interval:
-                self._generate_gif()
-                self.last_gif_time = current_time
-
     def draw(self):
         sky_color = self.interpolate_color(self.sky_colors[0], self.sky_colors[1], self.activity)
         self.surface.fill(sky_color)
@@ -187,6 +194,18 @@ class Ecosystem:
             bird.draw(self.surface)
 
         return self.surface
+
+    def post_update(self):
+        if self.generate_gifs:
+            frame = pygame.surfarray.array3d(self.surface)
+            frames = self.shared_frames.get_array()
+            index = self.current_frame_index.value
+            frames[index] = frame
+            self.current_frame_index.value = (index + 1) % self.frames_per_gif
+            self.frame_count += 1
+
+            if self.frame_count % self.frames_per_gif == 0:
+                (self.frame_count_queue.put(self.frame_count))
 
     def interpolate_color(self, color1, color2, t):
         return tuple(int(c1 + (c2 - c1) * t) for c1, c2 in zip(color1, color2, strict=False))
@@ -217,13 +236,47 @@ class Ecosystem:
         self.activity = 1
         self.elapsed_time = 0
 
-    def _generate_gif(self):
-        frames = [Image.frombytes("RGB", (self.width, self.height), frame) for frame in self.frame_queue]
-        gif_path = Path(self.gif_dir) / f"ecosystem_{int(time.time())}.gif"
-        frames[0].save(
-            gif_path, save_all=True, append_images=frames[1:], optimize=False, duration=1000 // self.fps, loop=0
-        )
-        self.gif_queue.put((str(gif_path), time.time()))
+    @staticmethod
+    def _gif_generation_process(shared_frames, current_frame_index, frame_count_queue, gif_info_queue, fps):
+        frames = shared_frames.get_array()
+
+        def optimize_frame(frame):
+            return Image.fromarray(frame.transpose(1, 0, 2)).quantize(method=Image.MEDIANCUT, colors=256)
+
+        with ThreadPoolExecutor() as executor:
+            while True:
+                frame_count = frame_count_queue.get()
+                if frame_count is None:
+                    break
+
+                start_index = current_frame_index.value
+                ordered_frames = np.roll(frames, -start_index, axis=0)
+
+                optimized_frames = list(executor.map(optimize_frame, ordered_frames))
+
+                duration = int(1000 / fps)
+
+                with io.BytesIO() as gif_buffer:
+                    optimized_frames[0].save(
+                        gif_buffer,
+                        format="GIF",
+                        save_all=True,
+                        append_images=optimized_frames[1:],
+                        optimize=False,
+                        duration=[duration] * (len(optimized_frames) - 1) + [15000],
+                        loop=0,
+                    )
+
+                    gif_data = gif_buffer.getvalue()
+
+                gif_info_queue.put((gif_data, time.time()))
+
+    def __del__(self):
+        if hasattr(self, "gif_process"):
+            # Signal to stop the gif generation process
+            self.frame_count_queue.put(None)
+
+            self.gif_process.join()
 
 
 class Button:
@@ -245,11 +298,12 @@ class Button:
 
 
 class EcosystemManager:
-    def __init__(self, width=800, height=600, generate_gifs=False):
+    def __init__(self, width=800, height=600, generate_gifs=False, fps=30):
         pygame.init()
-        self.ecosystem = Ecosystem(width, height, generate_gifs=generate_gifs)
+        self.ecosystem = Ecosystem(width, height, generate_gifs=generate_gifs, fps=fps)
         self.running = False
         self.thread = None
+        self.fps = fps
         self.gif_queue = Queue()
 
     def start(self, show_controls=True):
@@ -272,7 +326,7 @@ class EcosystemManager:
         clock = pygame.time.Clock()
 
         while self.running:
-            delta = clock.tick(60) / 1000.0
+            delta = clock.tick(self.fps) / 1000.0
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -282,15 +336,16 @@ class EcosystemManager:
 
             self.ecosystem.update(delta)
             screen.blit(self.ecosystem.draw(), (0, 0))
+            self.ecosystem.post_update()
 
             if show_controls:
                 self._draw_controls(screen)
 
             pygame.display.flip()
 
-            if self.ecosystem.generate_gifs and not self.ecosystem.gif_queue.empty():
-                gif_path, timestamp = self.ecosystem.gif_queue.get()
-                self.gif_queue.put((gif_path, timestamp))
+            if self.ecosystem.generate_gifs and not self.ecosystem.gif_info_queue.empty():
+                gif_data, timestamp = self.ecosystem.gif_info_queue.get()
+                self.gif_queue.put((gif_data, timestamp))
 
         pygame.quit()
 
@@ -348,3 +403,14 @@ class EcosystemManager:
         if not self.gif_queue.empty():
             return self.gif_queue.get()
         return None
+
+
+class SharedNumpyArray:
+    def __init__(self, shape, dtype=np.uint8):
+        self.shape = shape
+        self.dtype = dtype
+        size = int(np.prod(shape))
+        self.shared_array = multiprocessing.RawArray("B", size)
+
+    def get_array(self):
+        return np.frombuffer(self.shared_array, dtype=self.dtype).reshape(self.shape)
