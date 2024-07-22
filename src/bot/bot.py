@@ -44,7 +44,7 @@ class EcoCordClient(discord.Client):
         channel_id = payload.channel_id
         timestamp = payload.timestamp
         user = payload.user
-        print("{user} is typing a message on channel {channel} @ {timestamp}")
+        print(f"{user} is typing a message on channel {channel_id} @ {timestamp}")
 
     async def start_ecosystem(self):
         self.ecosystem_manager = EcosystemManager(generate_gifs=True)
