@@ -15,7 +15,6 @@ class TestEcoCordClient(EcoCordClient):
         self.fake_events_task = None
 
     async def on_ready(self) -> None:
-        await super().on_ready()
         print("Test client ready. Generating fake events...")
         self.fake_events_task = asyncio.create_task(self.generate_fake_events())
 
@@ -66,7 +65,6 @@ class TestEcoCordClient(EcoCordClient):
 
     async def run_bot(self) -> None:
         print("Starting test bot...")
-        await self.start_ecosystem()
         self.ready = True
         await self.on_ready()
         try:
@@ -80,4 +78,3 @@ class TestEcoCordClient(EcoCordClient):
             self.fake_events_task.cancel()
             with suppress(asyncio.CancelledError):
                 await self.fake_events_task
-        await self.stop_ecosystem()
