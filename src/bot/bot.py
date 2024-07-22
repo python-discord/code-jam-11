@@ -39,7 +39,6 @@ class EcoCordClient(discord.Client):
         await self.start_ecosystems()
         for guild in self.guilds:
             online_members = [member.id for member in guild.members if member.status != discord.Status.offline]
-            print(online_members)
             self.ecosystem_manager.on_load_critters(online_members)
 
     async def on_message(self, message: discord.Message) -> None:
@@ -57,7 +56,7 @@ class EcoCordClient(discord.Client):
             timestamp=message.created_at,
             guild=message.guild,
             channel=message.channel,
-            user=message.author,
+            member=message.author,
             content=message.content,
         )
         await self.process_event(event)
@@ -79,7 +78,7 @@ class EcoCordClient(discord.Client):
             timestamp=message.created_at,
             guild=self.get_guild(payload.guild_id),
             channel=channel,
-            user=payload.member,
+            member=payload.member,
             content=f"{payload.emoji} added on {message.content}",
         )
         await self.process_event(event)
@@ -100,7 +99,7 @@ class EcoCordClient(discord.Client):
             timestamp=payload.timestamp,
             guild=self.get_guild(payload.guild_id),
             channel=channel,
-            user=payload.user,
+            member=payload.user,
             content="User is typing",
         )
         await self.process_event(event)
@@ -108,7 +107,7 @@ class EcoCordClient(discord.Client):
     async def process_event(self, event: DiscordEvent) -> None:
         """Process a DiscordEvent by logging it and passing it to the corresponding ecosystem manager."""
         print(
-            f"Event: {event.type.name} - {event.user.display_name} in {event.channel}: {event.content} @ {event.timestamp}"
+            f"Event: {event.type.name} - {event.member.display_name} in {event.channel}: {event.content} @ {event.timestamp}"
         )
         ecosystem_manager = self.ecosystem_managers.get(event.channel.id)
         if ecosystem_manager:

@@ -610,13 +610,43 @@ class EcosystemManager:
         Args:
         ----
             event (DiscordEvent): The Discord event to process.
-        """
 
-        match event.type:
-            case EventType.MESSAGE:
-                self.user_frogs[user_id].start_jump()
-            case EventType.TYPING:
-                self._spawn_new_critter(user_id=user_id)
+        """
+        self.command_queue.put(("process_event", event))
+
+    def _process_event(self, ecosystem: Ecosystem, event: DiscordEvent) -> None:
+        """Process a Discord event within the ecosystem process.
+
+        Args:
+        ----
+            ecosystem (Ecosystem): The ecosystem instance.
+            event (DiscordEvent): The Discord event to process.
+
+        """
+        if not self.interactive:
+            current_time = time.time()
+            user_id = event.user.id
+
+            if event.type in ("typing", "message"):
+                self._handle_user_activity(ecosystem, user_id, current_time, event.type == "typing")
+
+            self._remove_inactive_users(ecosystem, current_time)
+
+    def _handle_user_activity(self, ecosystem: Ecosystem, user_id: int, current_time: float, is_typing: bool) -> None:
+        """Handle user activity in the ecosystem.
+
+        Args:
+        ----
+            ecosystem (Ecosystem): The ecosystem instance.
+            user_id (int): ID of the user.
+            current_time (float): Current timestamp.
+            is_typing (bool): Whether the user is typing.
+
+        """
+        if user_id not in self.user_frogs:
+            self._spawn_new_frog(ecosystem, user_id)
+        elif is_typing:
+            self.user_frogs[user_id].move()
 
         self.last_activity[user_id] = current_time
         self._remove_inactive_users(current_time)
