@@ -8,6 +8,8 @@ from queue import Queue
 
 import numpy as np
 
+from .shared_numpy_array import SharedNumpyArray
+
 # Hide pygame welcome message
 with contextlib.redirect_stdout(None):
     import pygame
@@ -20,17 +22,6 @@ from .bird import Bird
 from .frog import Frog
 from .plant import Plant
 from .snake import Snake
-
-
-class SharedNumpyArray:
-    def __init__(self, shape: tuple[int, ...], dtype: np.dtype = np.uint8) -> None:
-        self.shape = shape
-        self.dtype = dtype
-        size = int(np.prod(shape))
-        self.shared_array = multiprocessing.RawArray("B", size)
-
-    def get_array(self) -> np.ndarray:
-        return np.frombuffer(self.shared_array, dtype=self.dtype).reshape(self.shape)
 
 
 class Ecosystem:
