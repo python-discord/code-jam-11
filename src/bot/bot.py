@@ -40,6 +40,12 @@ class EcoCordClient(discord.Client):
         message = await channel.fetch_message(message_id)
         print(f"{payload.emoji} added on {message.content} @ {message.created_at}")
 
+    async def on_raw_typing(self, payload: discord.RawTypingEvent):
+        channel_id = payload.channel_id
+        timestamp = payload.timestamp
+        user = payload.user
+        print("{user} is typing a message on channel {channel} @ {timestamp}")
+
     async def start_ecosystem(self):
         self.ecosystem_manager = EcosystemManager(generate_gifs=True)
         self.ecosystem_manager.start(show_controls=False)
