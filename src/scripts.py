@@ -32,7 +32,7 @@ def dev_interactive() -> None:
 def dev_discord_test() -> None:
     run_command(["poetry", "run", "format"])
     run_command(["poetry", "run", "lint"])
-    run_command(["poetry", "run", "run-discord-test"])
+    run_command(["poetry", "run", "run-test"])
 
 
 def dev_gifs() -> None:
