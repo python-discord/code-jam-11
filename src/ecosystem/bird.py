@@ -2,11 +2,11 @@ import math
 import random
 
 import pygame
-from pygame import Vector2
+from pygame import Surface, Vector2
 
 
 class Bird:
-    def __init__(self, width, height):
+    def __init__(self, width: int, height: int) -> None:
         self.width = width
         self.height = height
         self.position = Vector2(random.randint(0, width), random.randint(0, int(height * 0.7)))
@@ -18,14 +18,14 @@ class Bird:
         self.turn_chance = 0.02
         self.alive = True
 
-    def generate_color(self):
+    def generate_color(self) -> tuple[int, int, int]:
         return (
             random.randint(200, 255),
             random.randint(100, 200),
             random.randint(100, 200),
         )
 
-    def update(self, delta, activity):
+    def update(self, delta: float, activity: float) -> None:
         self.position += self.velocity * activity * delta * 60
 
         self.position.x = self.position.x % self.width
@@ -40,7 +40,7 @@ class Bird:
         if random.random() < 0.001 * delta:
             self.alive = False
 
-    def draw(self, surface):
+    def draw(self, surface: Surface) -> None:
         pygame.draw.circle(surface, self.color, (int(self.position.x), int(self.position.y)), int(self.size))
 
         left_wing = self.position + Vector2(-self.size, 0).rotate(self.wing_angle)
@@ -64,6 +64,6 @@ class Bird:
             ],
         )
 
-    def spawn(self):
+    def spawn(self) -> None:
         self.alive = True
         self.position = Vector2(random.randint(0, self.width), random.randint(0, int(self.height * 0.7)))

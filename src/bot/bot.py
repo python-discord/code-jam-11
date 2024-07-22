@@ -16,7 +16,7 @@ MAX_MESSAGES = 2
 
 
 class EcoCordClient(discord.Client):
-    def __init__(self):
+    def __init__(self) -> None:
         intents = discord.Intents.default()
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
@@ -24,15 +24,15 @@ class EcoCordClient(discord.Client):
         self.ecosystem_manager = None
         self.ready = False
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         self.ready = True
         print(f"Logged in as {self.user} (ID: {self.user.id})")
         print("------")
 
-    async def on_message(self, message: discord.Message):
+    async def on_message(self, message: discord.Message) -> None:
         print(f"{message.author.display_name} sent a message: {message.content} @ {message.created_at}")
 
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
         message_id = payload.message_id
         channel_id = payload.channel_id
         guild = self.get_guild(payload.guild_id)
@@ -40,21 +40,21 @@ class EcoCordClient(discord.Client):
         message = await channel.fetch_message(message_id)
         print(f"{payload.emoji} added on {message.content} @ {message.created_at}")
 
-    async def on_raw_typing(self, payload: discord.RawTypingEvent):
+    async def on_raw_typing(self, payload: discord.RawTypingEvent) -> None:
         channel_id = payload.channel_id
         timestamp = payload.timestamp
         user = payload.user
         print(f"{user} is typing a message on channel {channel_id} @ {timestamp}")
 
-    async def start_ecosystem(self):
+    async def start_ecosystem(self) -> None:
         self.ecosystem_manager = EcosystemManager(generate_gifs=True)
         self.ecosystem_manager.start(show_controls=False)
 
-    async def stop_ecosystem(self):
+    async def stop_ecosystem(self) -> None:
         if self.ecosystem_manager:
             self.ecosystem_manager.stop()
 
-    async def find_existing_messages(self, channel):
+    async def find_existing_messages(self, channel: discord.TextChannel) -> list[discord.Message]:
         existing_messages = [
             message
             async for message in channel.history(limit=100)
@@ -62,7 +62,7 @@ class EcoCordClient(discord.Client):
         ]
         return sorted(existing_messages, key=lambda m: m.created_at)
 
-    async def send_gifs(self):
+    async def send_gifs(self) -> None:
         if not self.ecosystem_manager:
             return
 
@@ -104,6 +104,6 @@ class EcoCordClient(discord.Client):
 
             message_queue.append(new_message)
 
-    async def run_bot(self):
+    async def run_bot(self) -> None:
         print("Starting bot...")
         await self.start(BOT_TOKEN)

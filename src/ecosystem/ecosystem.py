@@ -22,8 +22,21 @@ from .plant import Plant
 from .snake import Snake
 
 
+class SharedNumpyArray:
+    def __init__(self, shape: tuple[int, ...], dtype: np.dtype = np.uint8) -> None:
+        self.shape = shape
+        self.dtype = dtype
+        size = int(np.prod(shape))
+        self.shared_array = multiprocessing.RawArray("B", size)
+
+    def get_array(self) -> np.ndarray:
+        return np.frombuffer(self.shared_array, dtype=self.dtype).reshape(self.shape)
+
+
 class Ecosystem:
-    def __init__(self, width, height, generate_gifs=False, gif_duration=5, fps=30):
+    def __init__(
+        self, width: int, height: int, generate_gifs: bool = False, gif_duration: int = 5, fps: int = 30
+    ) -> None:
         self.width = width
         self.height = height
         self.activity = 1
@@ -76,7 +89,7 @@ class Ecosystem:
             )
             self.gif_process.start()
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         button_width = 120
         button_height = 30
         button_spacing = 10
@@ -142,7 +155,7 @@ class Ecosystem:
             self.font,
         )
 
-    def update(self, delta):
+    def update(self, delta: float) -> None:
         self.elapsed_time += delta
 
         for plant in self.plants:
@@ -174,7 +187,7 @@ class Ecosystem:
         self.snakes = [snake for snake in self.snakes if snake.alive]
         self.birds = [bird for bird in self.birds if bird.alive]
 
-    def draw(self):
+    def draw(self) -> pygame.Surface:
         sky_color = self.interpolate_color(self.sky_colors[0], self.sky_colors[1], self.activity)
         self.surface.fill(sky_color)
 
@@ -195,7 +208,7 @@ class Ecosystem:
 
         return self.surface
 
-    def post_update(self):
+    def post_update(self) -> None:
         if self.generate_gifs:
             frame = pygame.surfarray.array3d(self.surface)
             frames = self.shared_frames.get_array()
@@ -207,28 +220,30 @@ class Ecosystem:
             if self.frame_count % self.frames_per_gif == 0:
                 (self.frame_count_queue.put(self.frame_count))
 
-    def interpolate_color(self, color1, color2, t):
+    def interpolate_color(
+        self, color1: tuple[int, int, int], color2: tuple[int, int, int], t: float
+    ) -> tuple[int, int, int]:
         return tuple(int(c1 + (c2 - c1) * t) for c1, c2 in zip(color1, color2, strict=False))
 
-    def spawn_plant(self):
+    def spawn_plant(self) -> None:
         self.plants.append(Plant(random.randint(0, self.width), self.height * 0.7))
 
-    def spawn_frog(self):
+    def spawn_frog(self) -> None:
         new_frog = Frog(random.randint(0, self.width), self.height - 20, self.width, self.height)
         new_frog.spawn()
         self.frogs.append(new_frog)
 
-    def spawn_snake(self):
+    def spawn_snake(self) -> None:
         new_snake = Snake(random.randint(0, self.width), self.height * 0.7, self.width, self.height)
         new_snake.spawn()
         self.snakes.append(new_snake)
 
-    def spawn_bird(self):
+    def spawn_bird(self) -> None:
         new_bird = Bird(self.width, self.height)
         new_bird.spawn()
         self.birds.append(new_bird)
 
-    def reset(self):
+    def reset(self) -> None:
         self.plants.clear()
         self.frogs.clear()
         self.snakes.clear()
@@ -237,10 +252,16 @@ class Ecosystem:
         self.elapsed_time = 0
 
     @staticmethod
-    def _gif_generation_process(shared_frames, current_frame_index, frame_count_queue, gif_info_queue, fps):
+    def _gif_generation_process(
+        shared_frames: SharedNumpyArray,
+        current_frame_index: multiprocessing.Value,
+        frame_count_queue: multiprocessing.Queue,
+        gif_info_queue: multiprocessing.Queue,
+        fps: int,
+    ) -> None:
         frames = shared_frames.get_array()
 
-        def optimize_frame(frame):
+        def optimize_frame(frame: np.ndarray) -> Image.Image:
             return Image.fromarray(frame.transpose(1, 0, 2)).quantize(method=Image.MEDIANCUT, colors=256)
 
         with ThreadPoolExecutor() as executor:
@@ -271,7 +292,7 @@ class Ecosystem:
 
                 gif_info_queue.put((gif_data, time.time()))
 
-    def __del__(self):
+    def __del__(self) -> None:
         if hasattr(self, "gif_process"):
             # Signal to stop the gif generation process
             self.frame_count_queue.put(None)
@@ -280,25 +301,35 @@ class Ecosystem:
 
 
 class Button:
-    def __init__(self, x, y, width, height, text, color, text_color, font):
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        text: str,
+        color: tuple[int, int, int],
+        text_color: tuple[int, int, int],
+        font: pygame.font.Font,
+    ) -> None:
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.color = color
         self.text_color = text_color
         self.font = font
 
-    def draw(self, surface):
+    def draw(self, surface: pygame.Surface) -> None:
         pygame.draw.rect(surface, self.color, self.rect)
         text_surface = self.font.render(self.text, True, self.text_color)
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
 
-    def is_clicked(self, pos):
+    def is_clicked(self, pos: tuple[int, int]) -> bool:
         return self.rect.collidepoint(pos)
 
 
 class EcosystemManager:
-    def __init__(self, width=800, height=600, generate_gifs=False, fps=30):
+    def __init__(self, width: int = 800, height: int = 600, generate_gifs: bool = False, fps: int = 30) -> None:
         pygame.init()
         self.ecosystem = Ecosystem(width, height, generate_gifs=generate_gifs, fps=fps)
         self.running = False
@@ -306,7 +337,7 @@ class EcosystemManager:
         self.fps = fps
         self.gif_queue = Queue()
 
-    def start(self, show_controls=True):
+    def start(self, show_controls: bool = True) -> None:
         if self.thread and self.thread.is_alive():
             return
 
@@ -314,12 +345,12 @@ class EcosystemManager:
         self.thread = threading.Thread(target=self._run_ecosystem, args=(show_controls,))
         self.thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
         self.running = False
         if self.thread:
             self.thread.join()
 
-    def _run_ecosystem(self, show_controls):
+    def _run_ecosystem(self, show_controls: bool) -> None:
         pygame.init()
         screen = pygame.display.set_mode((self.ecosystem.width, self.ecosystem.height))
         pygame.display.set_caption("Ecosystem Visualization")
@@ -349,7 +380,7 @@ class EcosystemManager:
 
         pygame.quit()
 
-    def _handle_mouse_click(self, position):
+    def _handle_mouse_click(self, position: tuple[int, int]) -> None:
         if self.ecosystem.activity_slider.collidepoint(position):
             self.ecosystem.activity = (
                 position[0] - self.ecosystem.activity_slider.x
@@ -365,7 +396,7 @@ class EcosystemManager:
         elif self.ecosystem.reset_button.is_clicked(position):
             self.ecosystem.reset()
 
-    def _draw_controls(self, screen):
+    def _draw_controls(self, screen: pygame.Surface) -> None:
         pygame.draw.rect(screen, (200, 200, 200), self.ecosystem.activity_slider)
         pygame.draw.rect(
             screen,
@@ -399,18 +430,7 @@ class EcosystemManager:
         birds_text = self.ecosystem.font.render(f"Birds: {len(self.ecosystem.birds)}", True, (0, 0, 0))
         screen.blit(birds_text, (20, 170))
 
-    def get_latest_gif(self):
+    def get_latest_gif(self) -> tuple[bytes, float] | None:
         if not self.gif_queue.empty():
             return self.gif_queue.get()
         return None
-
-
-class SharedNumpyArray:
-    def __init__(self, shape, dtype=np.uint8):
-        self.shape = shape
-        self.dtype = dtype
-        size = int(np.prod(shape))
-        self.shared_array = multiprocessing.RawArray("B", size)
-
-    def get_array(self):
-        return np.frombuffer(self.shared_array, dtype=self.dtype).reshape(self.shape)

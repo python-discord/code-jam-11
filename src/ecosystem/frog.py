@@ -5,7 +5,7 @@ import pygame
 
 
 class Frog:
-    def __init__(self, x, y, width, height):
+    def __init__(self, x: float, y: float, width: int, height: int) -> None:
         self.x = x
         self.y = y
         self.width = width
@@ -27,7 +27,7 @@ class Frog:
         self.scale = 1.0
         self.alive = True
 
-    def update(self, delta, activity):
+    def update(self, delta: float, activity: float) -> None:
         self.state_time += delta
 
         if self.state == "rest":
@@ -46,14 +46,14 @@ class Frog:
         if random.random() < 0.01 * delta:
             self.alive = False
 
-    def start_jump(self):
+    def start_jump(self) -> None:
         self.state = "jump"
         self.state_time = 0
         self.jump_start_y = self.y
         jump_distance = random.uniform(50, 150)
         self.jump_target_x = max(0, min(self.width, self.x + random.uniform(-jump_distance, jump_distance)))
 
-    def draw(self, surface):
+    def draw(self, surface: pygame.Surface) -> None:
         self.scale = 0.5 + (self.y / self.height) * 0.5
 
         scaled_size = int(self.size * self.scale)
@@ -74,11 +74,11 @@ class Frog:
         mouth_rect = pygame.Rect(self.x - scaled_size // 4, self.y, scaled_size // 2, scaled_size // 4)
         pygame.draw.arc(surface, (50, 50, 50), mouth_rect, math.pi, 2 * math.pi, 2)
 
-    def spawn(self):
+    def spawn(self) -> None:
         self.alive = True
         self.y = self.height
         self.x = random.randint(0, self.width)
         self.scale = 0.1
 
-    def despawn(self):
+    def despawn(self) -> None:
         self.alive = False

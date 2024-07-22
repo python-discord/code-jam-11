@@ -1,12 +1,13 @@
 import asyncio
 import sys
 import time
+from collections.abc import Generator
 
 from bot import EcoCordClient
 from ecosystem import EcosystemManager
 
 
-async def run_discord_bot():
+async def run_discord_bot() -> None:
     loop = asyncio.get_event_loop()
 
     client = EcoCordClient()
@@ -25,7 +26,7 @@ async def run_discord_bot():
         await loop.shutdown_asyncgens()
 
 
-def run_gif_generator(duration=None):
+def run_gif_generator(duration: float | None = None) -> Generator[tuple[str, float], None, None]:
     manager = EcosystemManager(generate_gifs=True)
     manager.start(show_controls=False)
 
@@ -40,13 +41,13 @@ def run_gif_generator(duration=None):
         manager.stop()
 
 
-def run_pygame(show_controls=True, generate_gifs=False):
+def run_pygame(show_controls: bool = True, generate_gifs: bool = False) -> EcosystemManager:
     manager = EcosystemManager(generate_gifs=generate_gifs)
     manager.start(show_controls=show_controls)
     return manager
 
 
-def main():
+def main() -> None:
     if "--discord" in sys.argv:
         print("Running with Discord integration...")
         asyncio.run(run_discord_bot())
