@@ -4,7 +4,9 @@ version = "0.1.0"
 description = ""
 authors = ["Steve Mostovoy <stevemostovoysm@gmail.com>"]
 readme = "README.md"
-package-mode = false
+packages = [
+    { include = "src" }
+]
 license = "MIT"
 
 [tool.poetry.dependencies]
@@ -89,4 +91,18 @@ ignore = [
     "COM819",
     "ISC001",
     "ISC002",
+    # Subprocess
+    "S603",
 ]
+
+[tool.poetry.scripts]
+format = "src.scripts:format"
+lint = "src.scripts:lint"
+run = "src.app:main"
+run-interactive = "src.app:main_interactive"
+run-discord-test = "src.app:main_discord_test"
+run-gifs = "src.app:main_gifs"
+dev = "src.scripts:dev"
+dev-interactive = "src.scripts:dev_interactive"
+dev-discord-test = "src.scripts:dev_discord_test"
+dev-gifs = "src.scripts:dev_gifs"

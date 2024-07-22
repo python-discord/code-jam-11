@@ -2,6 +2,8 @@ import asyncio
 import io
 import logging
 from collections import deque
+from dataclasses import dataclass
+from datetime import datetime
 
 import discord
 from discord import app_commands
@@ -13,6 +15,16 @@ from .settings import BOT_TOKEN, GIF_CHANNEL_ID, GUILD_ID
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
 
 MAX_MESSAGES = 2
+
+
+@dataclass
+class DiscordEvent:
+    type: str
+    timestamp: datetime
+    guild: discord.Guild
+    channel: discord.TextChannel
+    user: discord.User
+    content: str
 
 
 class EcoCordClient(discord.Client):
@@ -30,21 +42,47 @@ class EcoCordClient(discord.Client):
         print("------")
 
     async def on_message(self, message: discord.Message) -> None:
-        print(f"{message.author.display_name} sent a message: {message.content} @ {message.created_at}")
+        event = DiscordEvent(
+            type="message",
+            timestamp=message.created_at,
+            guild=message.guild,
+            channel=message.channel,
+            user=message.author,
+            content=message.content,
+        )
+        await self.process_event(event)
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
-        message_id = payload.message_id
-        channel_id = payload.channel_id
-        guild = self.get_guild(payload.guild_id)
-        channel = guild.get_channel(channel_id)
-        message = await channel.fetch_message(message_id)
-        print(f"{payload.emoji} added on {message.content} @ {message.created_at}")
+        channel = self.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        event = DiscordEvent(
+            type="reaction",
+            timestamp=message.created_at,
+            guild=self.get_guild(payload.guild_id),
+            channel=channel,
+            user=payload.member,
+            content=f"{payload.emoji} added on {message.content}",
+        )
+        await self.process_event(event)
 
     async def on_raw_typing(self, payload: discord.RawTypingEvent) -> None:
-        channel_id = payload.channel_id
-        timestamp = payload.timestamp
-        user = payload.user
-        print(f"{user} is typing a message on channel {channel_id} @ {timestamp}")
+        channel = self.get_channel(payload.channel_id)
+        event = DiscordEvent(
+            type="typing",
+            timestamp=payload.timestamp,
+            guild=self.get_guild(payload.guild_id),
+            channel=channel,
+            user=payload.user,
+            content="User is typing",
+        )
+        await self.process_event(event)
+
+    async def process_event(self, event: DiscordEvent) -> None:
+        print(
+            f"Event: {event.type} - {event.user.display_name} in {event.channel}: {event.content} @ {event.timestamp}"
+        )
+        if self.ecosystem_manager:
+            self.ecosystem_manager.process_event(event)
 
     async def start_ecosystem(self) -> None:
         self.ecosystem_manager = EcosystemManager(generate_gifs=True)
