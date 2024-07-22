@@ -5,6 +5,7 @@ import multiprocessing
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import discord.member
 import numpy as np
 
 from .shared_numpy_array import SharedNumpyArray
@@ -17,12 +18,13 @@ import random
 
 from PIL import Image
 
-from bot.discord_event import DiscordEvent
+from bot.discord_event import DiscordEvent, EventType
 
 from .bird import Bird
 from .frog import Frog
 from .plant import Plant
 from .snake import Snake
+from .critter import Critter
 
 
 class Ecosystem:
@@ -68,10 +70,7 @@ class Ecosystem:
             (34, 139, 34),  # Lush green
         ]
 
-        self.plants = []
-        self.frogs = []
-        self.snakes = []
-        self.birds = []
+        self.critters = []
 
         self.font = None
         self.activity_slider = None
@@ -186,17 +185,8 @@ class Ecosystem:
         """
         self.elapsed_time += delta
 
-        for plant in self.plants:
-            plant.update(delta, self.activity)
-
-        for frog in self.frogs:
-            frog.update(delta, self.activity)
-
-        for snake in self.snakes:
-            snake.update(delta, self.activity)
-
-        for bird in self.birds:
-            bird.update(delta, self.activity)
+        for critter in self.critters:
+            critter.update(delta, self.activity)
 
         if self.interactive:
             self._handle_standard_spawning(delta)
@@ -225,10 +215,7 @@ class Ecosystem:
 
     def _clean_up_entities(self) -> None:
         """Remove dead entities from the ecosystem."""
-        self.plants = [plant for plant in self.plants if plant.alive]
-        self.frogs = [frog for frog in self.frogs if frog.alive]
-        self.snakes = [snake for snake in self.snakes if snake.alive]
-        self.birds = [bird for bird in self.birds if bird.alive]
+        self.critters = [critter for critter in self.critters if critter.alive]
 
     def draw(self) -> pygame.Surface:
         """Draw the current state of the ecosystem.
@@ -253,17 +240,8 @@ class Ecosystem:
 
         self.surface.blit(gradient_surface, (0, self.height - ground_height))
 
-        for plant in self.plants:
-            plant.draw(self.surface)
-
-        for frog in self.frogs:
-            frog.draw(self.surface)
-
-        for snake in self.snakes:
-            snake.draw(self.surface)
-
-        for bird in self.birds:
-            bird.draw(self.surface)
+        for critter in self.critters:
+            critter.draw(self.surface)
 
         return self.surface
 
@@ -632,64 +610,35 @@ class EcosystemManager:
         Args:
         ----
             event (DiscordEvent): The Discord event to process.
-
         """
-        self.command_queue.put(("process_event", event))
 
-    def _process_event(self, ecosystem: Ecosystem, event: DiscordEvent) -> None:
-        """Process a Discord event within the ecosystem process.
-
-        Args:
-        ----
-            ecosystem (Ecosystem): The ecosystem instance.
-            event (DiscordEvent): The Discord event to process.
-
-        """
-        if not self.interactive:
-            current_time = time.time()
-            user_id = event.user.id
-
-            if event.type in ("typing", "message"):
-                self._handle_user_activity(ecosystem, user_id, current_time, event.type == "typing")
-
-            self._remove_inactive_users(ecosystem, current_time)
-
-    def _handle_user_activity(self, ecosystem: Ecosystem, user_id: int, current_time: float, is_typing: bool) -> None:
-        """Handle user activity in the ecosystem.
-
-        Args:
-        ----
-            ecosystem (Ecosystem): The ecosystem instance.
-            user_id (int): ID of the user.
-            current_time (float): Current timestamp.
-            is_typing (bool): Whether the user is typing.
-
-        """
-        if user_id not in self.user_frogs:
-            self._spawn_new_frog(ecosystem, user_id)
-        elif is_typing:
-            self.user_frogs[user_id].move()
+        match event.type:
+            case EventType.MESSAGE:
+                self.user_frogs[user_id].start_jump()
+            case EventType.TYPING:
+                self._spawn_new_critter(user_id=user_id)
 
         self.last_activity[user_id] = current_time
+        self._remove_inactive_users(current_time)
 
-    def _spawn_new_frog(self, ecosystem: Ecosystem, user_id: int) -> None:
-        """Spawn a new frog for a user.
+    def on_load_critters(self, online_members: list[int]) -> None:
+        for member in online_members:
+            self._spawn_new_critter(member)
+            print(f"{member}'s critter spawned")
 
-        Args:
-        ----
-            ecosystem (Ecosystem): The ecosystem instance.
-            user_id (int): ID of the user.
 
-        """
-        new_frog = Frog(
-            random.randint(0, ecosystem.width),
-            ecosystem.height - 20,
-            ecosystem.width,
-            ecosystem.height,
-        )
-        new_frog.spawn()
-        self.user_frogs[user_id] = new_frog
-        ecosystem.frogs.append(new_frog)
+    def _spawn_new_critter(self, user_id: int) -> None:
+        if user_id not in self.user_frogs:
+            critter = Critter(
+                user_id,
+                random.randint(0, self.ecosystem.width),
+                self.ecosystem.height - 20,
+                self.ecosystem.width,
+                self.ecosystem.height,
+            )
+            critter.spawn()
+            self.user_frogs[user_id] = critter
+            self.ecosystem.critters.append(critter)
 
     def _remove_inactive_users(self, ecosystem: Ecosystem, current_time: float) -> None:
         """Remove inactive users from the ecosystem.
@@ -707,18 +656,10 @@ class EcosystemManager:
         for user_id in inactive_users:
             self._remove_user(ecosystem, user_id)
 
-    def _remove_user(self, ecosystem: Ecosystem, user_id: int) -> None:
-        """Remove a user from the ecosystem.
-
-        Args:
-        ----
-            ecosystem (Ecosystem): The ecosystem instance.
-            user_id (int): ID of the user to remove.
-
-        """
+    def _remove_critter(self, user_id: int) -> None:
         if user_id in self.user_frogs:
             frog = self.user_frogs.pop(user_id)
-            ecosystem.frogs.remove(frog)
+            self.ecosystem.critters.remove(frog)
         self.last_activity.pop(user_id, None)
 
     def get_latest_gif(self) -> tuple[bytes, float] | None:

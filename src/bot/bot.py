@@ -8,7 +8,7 @@ from discord import app_commands
 
 from ecosystem import EcosystemManager
 
-from .discord_event import DiscordEvent
+from .discord_event import DiscordEvent, EventType
 from .settings import BOT_TOKEN, GIF_CHANNEL_ID, GUILD_ID
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
@@ -37,6 +37,10 @@ class EcoCordClient(discord.Client):
         print(f"Logged in as {self.user} (ID: {self.user.id})")
         print("------")
         await self.start_ecosystems()
+        for guild in self.guilds:
+            online_members = [member.id for member in guild.members if member.status != discord.Status.offline]
+            print(online_members)
+            self.ecosystem_manager.on_load_critters(online_members)
 
     async def on_message(self, message: discord.Message) -> None:
         """Event receiver for when a message is sent in a visible channel.
@@ -49,7 +53,7 @@ class EcoCordClient(discord.Client):
 
         """
         event = DiscordEvent.from_discord_objects(
-            type="message",
+            type=EventType.MESSAGE,
             timestamp=message.created_at,
             guild=message.guild,
             channel=message.channel,
@@ -71,7 +75,7 @@ class EcoCordClient(discord.Client):
         channel = self.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         event = DiscordEvent.from_discord_objects(
-            type="reaction",
+            type=EventType.REACTION,
             timestamp=message.created_at,
             guild=self.get_guild(payload.guild_id),
             channel=channel,
@@ -92,7 +96,7 @@ class EcoCordClient(discord.Client):
         """
         channel = self.get_channel(payload.channel_id)
         event = DiscordEvent.from_discord_objects(
-            type="typing",
+            type=EventType.TYPING,
             timestamp=payload.timestamp,
             guild=self.get_guild(payload.guild_id),
             channel=channel,
@@ -104,7 +108,7 @@ class EcoCordClient(discord.Client):
     async def process_event(self, event: DiscordEvent) -> None:
         """Process a DiscordEvent by logging it and passing it to the corresponding ecosystem manager."""
         print(
-            f"Event: {event.type} - {event.user.display_name} in {event.channel}: {event.content} @ {event.timestamp}"
+            f"Event: {event.type.name} - {event.user.display_name} in {event.channel}: {event.content} @ {event.timestamp}"
         )
         ecosystem_manager = self.ecosystem_managers.get(event.channel.id)
         if ecosystem_manager:

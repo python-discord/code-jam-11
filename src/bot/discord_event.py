@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
+from enum import Flag, auto
 
 if TYPE_CHECKING:
     import discord
@@ -19,6 +20,13 @@ class FakeUser:
 
     id: int
     display_name: str
+
+
+class EventType(Flag):
+    ON_LOAD = auto()
+    MESSAGE = auto()
+    REACTION = auto()
+    TYPING = auto()
 
 
 @dataclass
@@ -85,7 +93,7 @@ class DiscordEvent:
 
     """
 
-    type: str
+    type: EventType
     timestamp: datetime
     guild: SerializableGuild
     channel: SerializableTextChannel
