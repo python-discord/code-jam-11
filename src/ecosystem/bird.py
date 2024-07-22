@@ -6,7 +6,20 @@ from pygame import Surface, Vector2
 
 
 class Bird:
+    """Represents a bird in the ecosystem simulation.
+
+    This class handles the bird's movement, appearance, and lifecycle.
+    """
+
     def __init__(self, width: int, height: int) -> None:
+        """Initialize a new Bird instance.
+
+        Args:
+        ----
+            width (int): The width of the simulation area.
+            height (int): The height of the simulation area.
+
+        """
         self.width = width
         self.height = height
         self.position = Vector2(random.randint(0, width), random.randint(0, int(height * 0.7)))
@@ -19,6 +32,13 @@ class Bird:
         self.alive = True
 
     def generate_color(self) -> tuple[int, int, int]:
+        """Generate a random color for the bird.
+
+        Returns
+        -------
+            tuple[int, int, int]: A tuple representing an RGB color.
+
+        """
         return (
             random.randint(200, 255),
             random.randint(100, 200),
@@ -26,6 +46,14 @@ class Bird:
         )
 
     def update(self, delta: float, activity: float) -> None:
+        """Update the bird's position and state.
+
+        Args:
+        ----
+            delta (float): The time elapsed since the last update.
+            activity (float): The current activity level of the simulation.
+
+        """
         self.position += self.velocity * activity * delta * 60
 
         self.position.x = self.position.x % self.width
@@ -41,6 +69,13 @@ class Bird:
             self.alive = False
 
     def draw(self, surface: Surface) -> None:
+        """Draw the bird on the given surface.
+
+        Args:
+        ----
+            surface (Surface): The pygame surface to draw on.
+
+        """
         pygame.draw.circle(surface, self.color, (int(self.position.x), int(self.position.y)), int(self.size))
 
         left_wing = self.position + Vector2(-self.size, 0).rotate(self.wing_angle)
@@ -65,5 +100,6 @@ class Bird:
         )
 
     def spawn(self) -> None:
+        """Respawn the bird at a random position in the simulation area."""
         self.alive = True
         self.position = Vector2(random.randint(0, self.width), random.randint(0, int(self.height * 0.7)))

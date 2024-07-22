@@ -5,7 +5,22 @@ from pygame import Color, Surface, Vector2
 
 
 class Snake:
+    """Represents a snake in the ecosystem.
+
+    The snake moves towards a target, grows in length, and can spawn or despawn.
+    """
+
     def __init__(self, x: int, y: int, width: int, height: int) -> None:
+        """Initialize a new Snake instance.
+
+        Args:
+        ----
+            x (int): Initial x-coordinate of the snake's head.
+            y (int): Initial y-coordinate of the snake's head.
+            width (int): Width of the game area.
+            height (int): Height of the game area.
+
+        """
         self.width = width
         self.height = height
         self.segments = [Vector2(x, y)]
@@ -19,12 +34,34 @@ class Snake:
         self.scale = 0.1
 
     def generate_color(self) -> Color:
+        """Generate a random color for the snake.
+
+        Returns
+        -------
+            Color: A pygame Color object with random RGB values.
+
+        """
         return pygame.Color(random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
 
     def get_new_target(self) -> Vector2:
+        """Generate a new random target position for the snake.
+
+        Returns
+        -------
+            Vector2: A new target position within the game area.
+
+        """
         return Vector2(random.randint(0, self.width), random.randint(int(self.height * 0.7), self.height))
 
     def update(self, delta: float, activity: float) -> None:
+        """Update the snake's position and state.
+
+        Args:
+        ----
+            delta (float): Time elapsed since the last update.
+            activity (float): Activity level affecting the snake's speed.
+
+        """
         if self.state == "spawn":
             self.scale = min(1.0, self.scale + delta)
             if self.scale == 1.0:
@@ -49,6 +86,13 @@ class Snake:
             self.segments.pop()
 
     def draw(self, surface: Surface) -> None:
+        """Draw the snake on the given surface.
+
+        Args:
+        ----
+            surface (Surface): The pygame Surface to draw on.
+
+        """
         for i, segment in enumerate(self.segments):
             radius = int((10 * (1 - i / len(self.segments)) + 5) * self.scale)
             alpha = int(255 * (1 - i / len(self.segments)))
@@ -68,6 +112,7 @@ class Snake:
         pygame.draw.circle(surface, (0, 0, 0), (int(right_eye.x), int(right_eye.y)), pupil_radius)
 
     def spawn(self) -> None:
+        """Spawn the snake at a random position at the bottom of the screen."""
         self.alive = True
         self.scale = 0.1
         self.state = "spawn"
@@ -75,4 +120,5 @@ class Snake:
         self.color = self.generate_color()
 
     def start_despawn(self) -> None:
+        """Start the despawning process for the snake."""
         self.state = "despawn"

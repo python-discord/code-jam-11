@@ -38,19 +38,6 @@ select = ["ALL"]
 ignore = [
     # Missing docstrings.
     "D100",
-    "D104",
-    "D105",
-    "D106",
-    "D107",
-    # Docstring whitespace.
-    "D203",
-    "D213",
-    # Docstring punctuation.
-    "D415",
-    # Docstring quotes.
-    "D101",
-    "D103",
-    "D301",
     # Builtins.
     "A",
     # Print statements.
@@ -77,6 +64,9 @@ ignore = [
     "PLR0913",
     "PLR0915",
     # Ambiguous formatting rules
+    "D203",
+    "D211",
+    "D213",
     "W191",
     "E111",
     "E114",

@@ -5,7 +5,22 @@ import pygame
 
 
 class Frog:
+    """Represents a frog in the ecosystem simulation.
+
+    This class manages the frog's appearance, movement, and lifecycle.
+    """
+
     def __init__(self, x: float, y: float, width: int, height: int) -> None:
+        """Initialize a new Frog instance.
+
+        Args:
+        ----
+            x (float): Initial x-coordinate of the frog.
+            y (float): Initial y-coordinate of the frog.
+            width (int): Width of the ecosystem area.
+            height (int): Height of the ecosystem area.
+
+        """
         self.x = x
         self.y = y
         self.width = width
@@ -28,6 +43,14 @@ class Frog:
         self.alive = True
 
     def update(self, delta: float, activity: float) -> None:
+        """Update the frog's state and position.
+
+        Args:
+        ----
+            delta (float): Time elapsed since the last update.
+            activity (float): Current activity level in the ecosystem (unused).
+
+        """
         self.state_time += delta
 
         if self.state == "rest":
@@ -47,6 +70,11 @@ class Frog:
             self.alive = False
 
     def start_jump(self) -> None:
+        """Initiate a jump for the frog.
+
+        This method sets up the parameters for the frog's jump,
+        including the jump target and resetting the state.
+        """
         self.state = "jump"
         self.state_time = 0
         self.jump_start_y = self.y
@@ -54,6 +82,13 @@ class Frog:
         self.jump_target_x = max(0, min(self.width, self.x + random.uniform(-jump_distance, jump_distance)))
 
     def draw(self, surface: pygame.Surface) -> None:
+        """Draw the frog on the given surface.
+
+        Args:
+        ----
+            surface (pygame.Surface): The surface to draw the frog on.
+
+        """
         self.scale = 0.5 + (self.y / self.height) * 0.5
 
         scaled_size = int(self.size * self.scale)
@@ -75,13 +110,24 @@ class Frog:
         pygame.draw.arc(surface, (50, 50, 50), mouth_rect, math.pi, 2 * math.pi, 2)
 
     def spawn(self) -> None:
+        """Spawn the frog in the ecosystem.
+
+        This method resets the frog's position and sets it as alive.
+        """
         self.alive = True
         self.y = self.height - 20
         self.x = random.randint(0, self.width)
         self.scale = 0.1
 
     def despawn(self) -> None:
+        """Despawn the frog from the ecosystem.
+
+        This method sets the frog as not alive.
+        """
         self.alive = False
 
     def move(self) -> None:
-        pass
+        """Move the frog.
+
+        This method is currently a placeholder and does not implement any movement.
+        """
