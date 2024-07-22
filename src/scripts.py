@@ -1,12 +1,22 @@
 import os
+import signal
 import subprocess
+from contextlib import suppress
 from pathlib import Path
 
 
 def run_command(command: list[str]) -> None:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path(__file__).parent.resolve())
-    subprocess.run(command, env=env, check=True)
+    # Run the process and make sure to terminate it properly
+    process = subprocess.Popen(command, env=env)
+    try:
+        process.communicate()
+    except KeyboardInterrupt:
+        os.kill(process.pid, signal.SIGINT)
+    finally:
+        with suppress(ProcessLookupError):
+            os.kill(process.pid, signal.SIGTERM)
 
 
 def format() -> None:

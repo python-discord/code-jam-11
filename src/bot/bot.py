@@ -2,29 +2,18 @@ import asyncio
 import io
 import logging
 from collections import deque
-from dataclasses import dataclass
-from datetime import datetime
 
 import discord
 from discord import app_commands
 
 from ecosystem import EcosystemManager
 
+from .discord_event import DiscordEvent
 from .settings import BOT_TOKEN, GIF_CHANNEL_ID, GUILD_ID
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
 
 MAX_MESSAGES = 2
-
-
-@dataclass
-class DiscordEvent:
-    type: str
-    timestamp: datetime
-    guild: discord.Guild
-    channel: discord.TextChannel
-    user: discord.User
-    content: str
 
 
 class EcoCordClient(discord.Client):

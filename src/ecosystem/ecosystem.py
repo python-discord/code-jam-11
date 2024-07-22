@@ -1,3 +1,4 @@
+import atexit
 import contextlib
 import io
 import multiprocessing
@@ -17,6 +18,8 @@ with contextlib.redirect_stdout(None):
 import random
 
 from PIL import Image
+
+from bot.discord_event import DiscordEvent
 
 from .bird import Bird
 from .frog import Frog
@@ -79,6 +82,8 @@ class Ecosystem:
                 ),
             )
             self.gif_process.start()
+
+        atexit.register(self.cleanup)
 
     def setup_ui(self) -> None:
         button_width = 120
@@ -283,7 +288,10 @@ class Ecosystem:
 
                 gif_info_queue.put((gif_data, time.time()))
 
-    def __del__(self) -> None:
+    def cleanup(self) -> None:
+        print("Cleaning up EcoSystem...")
+        if pygame.get_init():
+            pygame.quit()
         if hasattr(self, "gif_process"):
             # Signal to stop the gif generation process
             self.frame_count_queue.put(None)
@@ -425,3 +433,6 @@ class EcosystemManager:
         if not self.gif_queue.empty():
             return self.gif_queue.get()
         return None
+
+    def process_event(self, event: DiscordEvent) -> None:
+        pass

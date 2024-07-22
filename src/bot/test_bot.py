@@ -3,13 +3,14 @@ import random
 from contextlib import suppress
 from datetime import UTC, datetime
 
-from .bot import DiscordEvent, EcoCordClient
+from .bot import EcoCordClient
+from .discord_event import DiscordEvent, FakeUser
 
 
 class TestEcoCordClient(EcoCordClient):
     def __init__(self) -> None:
         super().__init__()
-        self.fake_users = [{"id": i, "name": f"User{i}"} for i in range(1, 6)]
+        self.fake_users = [FakeUser(id=i, display_name=f"User{i}") for i in range(1, 6)]
         self.fake_channels = [{"id": i, "name": f"Channel{i}"} for i in range(1, 4)]
         self.fake_guild = {"id": 1, "name": "TestGuild"}
         self.fake_events_task = None
@@ -31,12 +32,13 @@ class TestEcoCordClient(EcoCordClient):
                 await self.generate_fake_typing()
 
     async def generate_fake_message(self) -> None:
+        user = random.choice(self.fake_users)
         event = DiscordEvent(
             type="message",
             timestamp=datetime.now(UTC),
             guild=self.fake_guild,
             channel=random.choice(self.fake_channels),
-            user=random.choice(self.fake_users),
+            user=user,
             content=f"Fake message {random.randint(1, 1000)}",
         )
         await self.process_event(event)
@@ -68,8 +70,17 @@ class TestEcoCordClient(EcoCordClient):
         self.ready = True
         await self.on_ready()
         try:
-            # Run for a limited time or until interrupted
-            await asyncio.sleep(3600)
+            while True:
+                if self.fake_events_task and self.fake_events_task.done():
+                    # This will raise the exception if there is one
+                    await self.fake_events_task
+                # Short sleep to prevent busy-waiting
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            print("Bot execution cancelled.")
+        except Exception:
+            # Re-raise the exception to ensure it's not silently caught
+            raise
         finally:
             await self.stop_bot()
 
