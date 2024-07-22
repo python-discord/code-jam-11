@@ -29,7 +29,13 @@ from .snake import Snake
 
 class Ecosystem:
     def __init__(
-        self, width: int, height: int, generate_gifs: bool = False, gif_duration: int = 5, fps: int = 30
+        self,
+        width: int,
+        height: int,
+        generate_gifs: bool = False,
+        gif_duration: int = 5,
+        fps: int = 30,
+        interactive: bool = True,
     ) -> None:
         self.width = width
         self.height = height
@@ -51,17 +57,17 @@ class Ecosystem:
         self.snakes = []
         self.birds = []
 
-        self.font = pygame.font.Font(None, 24)
+        self.font = None
         self.activity_slider = None
         self.spawn_plant_button = None
         self.spawn_frog_button = None
         self.spawn_snake_button = None
         self.spawn_bird_button = None
         self.reset_button = None
-        self.setup_ui()
 
         self.generate_gifs = generate_gifs
         self.fps = fps
+        self.interactive = interactive
 
         if self.generate_gifs:
             self.gif_duration = gif_duration
@@ -86,6 +92,8 @@ class Ecosystem:
         atexit.register(self.cleanup)
 
     def setup_ui(self) -> None:
+        self.font = pygame.font.Font(None, 24)
+
         button_width = 120
         button_height = 30
         button_spacing = 10
@@ -166,6 +174,12 @@ class Ecosystem:
         for bird in self.birds:
             bird.update(delta, self.activity)
 
+        if self.interactive:
+            self._handle_standard_spawning(delta)
+
+        self._clean_up_entities()
+
+    def _handle_standard_spawning(self, delta: float) -> None:
         if random.random() < self.activity * delta:
             self.spawn_plant()
 
@@ -178,6 +192,7 @@ class Ecosystem:
         if random.random() < self.activity * delta * 0.4:
             self.spawn_bird()
 
+    def _clean_up_entities(self) -> None:
         self.plants = [plant for plant in self.plants if plant.alive]
         self.frogs = [frog for frog in self.frogs if frog.alive]
         self.snakes = [snake for snake in self.snakes if snake.alive]
@@ -289,7 +304,7 @@ class Ecosystem:
                 gif_info_queue.put((gif_data, time.time()))
 
     def cleanup(self) -> None:
-        print("Cleaning up EcoSystem...")
+        print("Cleaning up Ecosystem...")
         if pygame.get_init():
             pygame.quit()
         if hasattr(self, "gif_process"):
@@ -323,18 +338,24 @@ class Button:
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
 
-    def is_clicked(self, pos: tuple[int, int]) -> bool:
-        return self.rect.collidepoint(pos)
+    def is_clicked(self, position: tuple[int, int]) -> bool:
+        return self.rect.collidepoint(position)
 
 
 class EcosystemManager:
-    def __init__(self, width: int = 800, height: int = 600, generate_gifs: bool = False, fps: int = 30) -> None:
-        pygame.init()
-        self.ecosystem = Ecosystem(width, height, generate_gifs=generate_gifs, fps=fps)
+    def __init__(
+        self, width: int = 800, height: int = 600, generate_gifs: bool = False, fps: int = 30, interactive: bool = True
+    ) -> None:
+        self.ecosystem = Ecosystem(width, height, generate_gifs=generate_gifs, fps=fps, interactive=interactive)
         self.running = False
         self.thread = None
         self.fps = fps
         self.gif_queue = Queue()
+        self.interactive = interactive
+
+        if not self.interactive:
+            self.user_frogs = {}  # Dictionary to store user frogs
+            self.last_activity = {}  # Dictionary to store last activity time for each user
 
     def start(self, show_controls: bool = True) -> None:
         if self.thread and self.thread.is_alive():
@@ -351,6 +372,8 @@ class EcosystemManager:
 
     def _run_ecosystem(self, show_controls: bool) -> None:
         pygame.init()
+        self.ecosystem.setup_ui()
+
         screen = pygame.display.set_mode((self.ecosystem.width, self.ecosystem.height))
         pygame.display.set_caption("Ecosystem Visualization")
         clock = pygame.time.Clock()
@@ -368,7 +391,7 @@ class EcosystemManager:
             screen.blit(self.ecosystem.draw(), (0, 0))
             self.ecosystem.post_update()
 
-            if show_controls:
+            if self.interactive and show_controls:
                 self._draw_controls(screen)
 
             pygame.display.flip()
@@ -378,6 +401,51 @@ class EcosystemManager:
                 self.gif_queue.put((gif_data, timestamp))
 
         pygame.quit()
+
+    def process_event(self, event: DiscordEvent) -> None:
+        if self.interactive:
+            return
+
+        current_time = time.time()
+        user_id = event.user.id
+
+        if event.type in ("typing", "message"):
+            self._handle_user_activity(user_id, current_time, event.type == "typing")
+
+        self._remove_inactive_users(current_time)
+
+    def _handle_user_activity(self, user_id: int, current_time: float, is_typing: bool) -> None:
+        if user_id not in self.user_frogs:
+            self._spawn_new_frog(user_id)
+        elif is_typing:
+            self.user_frogs[user_id].move()
+
+        self.last_activity[user_id] = current_time
+
+    def _spawn_new_frog(self, user_id: int) -> None:
+        new_frog = Frog(
+            random.randint(0, self.ecosystem.width),
+            self.ecosystem.height - 20,
+            self.ecosystem.width,
+            self.ecosystem.height,
+        )
+        new_frog.spawn()
+        self.user_frogs[user_id] = new_frog
+        self.ecosystem.frogs.append(new_frog)
+
+    def _remove_inactive_users(self, current_time: float) -> None:
+        one_minute = 60
+        inactive_users = [
+            user_id for user_id, last_time in self.last_activity.items() if current_time - last_time > one_minute
+        ]
+        for user_id in inactive_users:
+            self._remove_user(user_id)
+
+    def _remove_user(self, user_id: int) -> None:
+        if user_id in self.user_frogs:
+            frog = self.user_frogs.pop(user_id)
+            self.ecosystem.frogs.remove(frog)
+        self.last_activity.pop(user_id, None)
 
     def _handle_mouse_click(self, position: tuple[int, int]) -> None:
         if self.ecosystem.activity_slider.collidepoint(position):
@@ -433,6 +501,3 @@ class EcosystemManager:
         if not self.gif_queue.empty():
             return self.gif_queue.get()
         return None
-
-    def process_event(self, event: DiscordEvent) -> None:
-        pass

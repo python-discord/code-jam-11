@@ -1,5 +1,6 @@
 import asyncio
 import random
+import traceback
 from contextlib import suppress
 from datetime import UTC, datetime
 
@@ -79,7 +80,8 @@ class TestEcoCordClient(EcoCordClient):
         except asyncio.CancelledError:
             print("Bot execution cancelled.")
         except Exception:
-            # Re-raise the exception to ensure it's not silently caught
+            # Re-raise the exception after printing the stack trace
+            traceback.print_exc()
             raise
         finally:
             await self.stop_bot()

@@ -76,9 +76,12 @@ class Frog:
 
     def spawn(self) -> None:
         self.alive = True
-        self.y = self.height
+        self.y = self.height - 20
         self.x = random.randint(0, self.width)
         self.scale = 0.1
 
     def despawn(self) -> None:
         self.alive = False
+
+    def move(self) -> None:
+        pass

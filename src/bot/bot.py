@@ -74,7 +74,7 @@ class EcoCordClient(discord.Client):
             self.ecosystem_manager.process_event(event)
 
     async def start_ecosystem(self) -> None:
-        self.ecosystem_manager = EcosystemManager(generate_gifs=True)
+        self.ecosystem_manager = EcosystemManager(generate_gifs=True, interactive=False)
         self.ecosystem_manager.start(show_controls=False)
 
     async def stop_ecosystem(self) -> None:
