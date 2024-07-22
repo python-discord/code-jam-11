@@ -2,6 +2,8 @@ import asyncio
 import sys
 import time
 from collections.abc import Generator
+from datetime import UTC, datetime
+from pathlib import Path
 
 from bot import EcoCordClient, TestEcoCordClient
 from ecosystem import EcosystemManager
@@ -69,8 +71,16 @@ def main_discord_test() -> None:
 
 def main_gifs() -> None:
     print("Running in GIF generation mode...")
-    for gif_path, timestamp in run_gif_generator(duration=180):
-        print(f"New GIF generated at {timestamp}: {gif_path}")
+    gif_dir = Path("ecosystem_gifs")
+    gif_dir.mkdir(exist_ok=True)
+
+    for gif_bytes, timestamp in run_gif_generator(duration=180):
+        filename = f"ecosystem_{datetime.fromtimestamp(timestamp, tz=UTC).strftime('%Y%m%d_%H%M%S')}.gif"
+        filepath = gif_dir / filename
+
+        filepath.write_bytes(gif_bytes)
+
+        print(f"New GIF saved: {filepath}")
 
 
 if __name__ == "__main__":
