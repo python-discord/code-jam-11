@@ -37,6 +37,33 @@ class InfoView(discord.ui.View):
             )
             self.dropdown.callback = self._dropdown_callback
             self.add_item(self.dropdown)
+            self.add_item(
+                discord.ui.Button(
+                    style=discord.ButtonStyle.success,
+                    label="Mark as watched",
+                    emoji="✅",
+                    disabled=True,
+                    row=1,
+                )
+            )
+            self.add_item(
+                discord.ui.Button(
+                    style=discord.ButtonStyle.primary,
+                    label="Favorite",
+                    emoji="⭐",
+                    disabled=True,
+                    row=1,
+                )
+            )
+            self.add_item(
+                discord.ui.Button(
+                    style=discord.ButtonStyle.danger,
+                    label="View episodes",
+                    emoji="📺",
+                    disabled=True,
+                    row=1,
+                )
+            )
         self.index = 0
 
     def _get_embed(self) -> discord.Embed:
