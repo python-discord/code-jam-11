@@ -17,6 +17,7 @@ setuptools = "^71.0.4"
 discord-py = "^2.4.0"
 python-dotenv = "^1.0.1"
 numpy = "^2.0.0"
+pydantic = "^2.8.2"
 
 [tool.poetry.dev-dependencies]
 ruff = "0.5.4"
