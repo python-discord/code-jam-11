@@ -1,9 +1,20 @@
+from typing import Any
+
 import discord
-from discord import ApplicationContext, CheckFailure, Cog, SlashCommand, SlashCommandGroup, slash_command
+from discord import (
+    ApplicationCommand,
+    ApplicationContext,
+    CheckFailure,
+    Cog,
+    SlashCommand,
+    SlashCommandGroup,
+    slash_command,
+)
 from discord.ext.commands import CheckFailure as CommandCheckFailure
 from discord.ext.pages import Page, Paginator
 
 from src.bot import Bot
+from src.settings import COMMAND_EMOJI, GROUP_EMOJI
 from src.utils import mention_command
 from src.utils.cat_api import get_cat_image_url
 from src.utils.log import get_logger
@@ -20,30 +31,32 @@ class HelpCog(Cog):
     @slash_command()
     async def help(self, ctx: ApplicationContext) -> None:
         """Shows help for all available commands."""
-        cat_image_url = await get_cat_image_url(self.bot.http_session)
+        cat_image_url: str = await get_cat_image_url(self.bot.http_session)
         fields: list[tuple[str, str]] = []
 
-        for command in self.bot.commands:
+        async def gather_all_commands(command: ApplicationCommand[Any, ..., Any], depth: int = 0) -> None:
             try:
                 can_run = await command.can_run(ctx)
             except (CheckFailure, CommandCheckFailure):
                 can_run = False
             if not can_run:
-                continue
+                return
+            full_command_name: str = f"{mention_command(command)}".strip()
             if isinstance(command, SlashCommand):
-                fields.append((mention_command(command), command.description))
-            if isinstance(command, SlashCommandGroup):
-                value = (
-                    command.description
-                    + "\n\n"
-                    + "\n".join(
-                        f"{mention_command(subcommand)}: {subcommand.description}"
-                        for subcommand in command.subcommands
-                    )
+                fields.append(
+                    (f'{COMMAND_EMOJI} {full_command_name} {"sub-" * (depth-1)}command', f"{command.description}")
                 )
-                fields.append((f"{mention_command(command)} group", value))
+            elif isinstance(command, SlashCommandGroup):
+                fields.append((f'{GROUP_EMOJI}`{command}` {"sub-" * depth}group', f"{command.description}"))
+                for subcommand in command.subcommands:
+                    await gather_all_commands(subcommand, depth + 1)
+            else:
+                log.error(f"Got unexpected command type: {command.__class__.__name__}, {command!r}")
 
-        new_embed = lambda url: discord.Embed(title="help command").set_thumbnail(url=url)
+        for command in self.bot.commands:
+            await gather_all_commands(command)
+
+        new_embed = lambda url: discord.Embed(title="Help command").set_thumbnail(url=url)
 
         embeds: list[discord.Embed] = [new_embed(cat_image_url)]
         for name, value in fields:
