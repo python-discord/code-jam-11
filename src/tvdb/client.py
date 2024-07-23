@@ -18,6 +18,7 @@ from src.tvdb.generated_models import (
     SeriesIdExtendedGetResponse,
     SeriesIdGetResponse,
 )
+from src.utils.iterators import get_first
 from src.utils.log import get_logger
 
 from .errors import BadCallError, InvalidApiKeyError, InvalidIdError
@@ -86,16 +87,16 @@ class _Media(ABC):
                 self.overview_eng = self.data.overviews.root.get("eng")
         else:
             if self.data.aliases:
-                self.name_eng = next(alias for alias in self.data.aliases if alias.language == "eng").name
+                self.name_eng = get_first(alias.name for alias in self.data.aliases if alias.language == "eng")
             if isinstance(self.data, (SeriesExtendedRecord, MovieExtendedRecord)) and self.data.translations:
                 if self.data.translations.name_translations:
-                    self.name_eng = next(
+                    self.name_eng = get_first(
                         translation.name
                         for translation in self.data.translations.name_translations
                         if translation.language == "eng"
                     )
                 if self.data.translations.overview_translations:
-                    self.overview_eng = next(
+                    self.overview_eng = get_first(
                         translation.overview
                         for translation in self.data.translations.overview_translations
                         if translation.language == "eng"
