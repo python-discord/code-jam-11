@@ -244,7 +244,16 @@ class Ecosystem:
         self.surface.fill(sky_color)
 
         ground_color = self.interpolate_color(self.ground_colors[0], self.ground_colors[1], self.activity)
-        pygame.draw.rect(self.surface, ground_color, (0, self.height * 0.7, self.width, self.height * 0.3))
+        ground_height = int(self.height * 0.3)
+
+        # Create gradient for ground
+        gradient_surface = pygame.Surface((self.width, ground_height))
+        for y in range(ground_height):
+            alpha = y / ground_height
+            color = self.interpolate_color(ground_color, (50, 100, 50), alpha)
+            pygame.draw.line(gradient_surface, color, (0, y), (self.width, y))
+
+        self.surface.blit(gradient_surface, (0, self.height - ground_height))
 
         for plant in self.plants:
             plant.draw(self.surface)
