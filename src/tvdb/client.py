@@ -3,6 +3,7 @@ from enum import Enum
 from typing import ClassVar, Literal, Self, final, overload, override
 
 import aiohttp
+from aiocache import SimpleMemoryCache
 from yarl import URL
 
 from src.settings import TVDB_API_KEY
@@ -47,6 +48,9 @@ def parse_media_id(media_id: int | str) -> int:
         raise InvalidIdError("Invalid media ID.")
     else:
         return media_id
+
+
+cache = SimpleMemoryCache()
 
 
 class _Media(ABC):
@@ -166,6 +170,12 @@ class _Media(ABC):
         :return:
         """
         media_id = parse_media_id(media_id)
+        cache_key: str = f"{media_id}"
+        if extended:
+            cache_key += f"_{bool(short)}"
+            if meta:
+                cache_key += f"_{meta.value}"
+        response = await cache.get(cache_key)
         query: dict[str, str] = {}
         if extended:
             if meta:
@@ -178,12 +188,18 @@ class _Media(ABC):
             raise BadCallError("Meta can only be used with extended=True.")
         elif short:
             raise BadCallError("Short can only be enabled with extended=True.")
-        response = await client.request(
-            "GET",
-            f"{cls.ENDPOINT}/{media_id}" + ("/extended" if extended else ""),
-            query=query if query else None,
-        )
+        if not response:
+            response = await client.request(
+                "GET",
+                f"{cls.ENDPOINT}/{media_id}" + ("/extended" if extended else ""),
+                query=query if query else None,
+            )
+            await cache.set(key=cache_key, value=response)
+            log.trace(f"Stored into cache: {cache_key}")
+        else:
+            log.trace(f"Loaded from cache: {cache_key}")
         response = cls.ResponseType(**response) if not extended else cls.ExtendedResponseType(**response)  # pyright: ignore[reportCallIssue]
+
         return cls(client, response.data)
 
 
@@ -273,10 +289,17 @@ class TvdbClient:
         self, search_query: str, entity_type: Literal["series", "movie", None] = None, limit: int = 1
     ) -> list[Movie | Series]:
         """Search for a series or movie in the TVDB database."""
-        query: dict[str, str] = {"query": search_query, "limit": str(limit)}
-        if entity_type:
-            query["type"] = entity_type
-        data = await self.request("GET", "search", query=query)
+        cache_key: str = f"{search_query}_{entity_type}_{limit}"
+        data = await cache.get(cache_key)
+        if not data:
+            query: dict[str, str] = {"query": search_query, "limit": str(limit)}
+            if entity_type:
+                query["type"] = entity_type
+            data = await self.request("GET", "search", query=query)
+            await cache.set(key=cache_key, value=data)
+            log.trace(f"Stored into cache: {cache_key}")
+        else:
+            log.trace(f"Loaded from cache: {cache_key}")
         response = SearchGetResponse(**data)  # pyright: ignore[reportCallIssue]
         returnable: list[Movie | Series] = []
         if not response.data:

@@ -28,7 +28,7 @@ class InfoView(discord.ui.View):
                 placeholder="Not what you're looking for? Select a different result.",
                 options=[
                     discord.SelectOption(
-                        label=result.bilingual_name or "",
+                        label=(result.bilingual_name or "")[:100],
                         value=str(i),
                         description=result.overview[:100] if result.overview else None,
                     )
