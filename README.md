@@ -64,15 +64,17 @@ convenient.
 TODO: Separate these to variables necessary to run the bot, and those only relevant during development.
 -->
 
-| Variable name          | Type   | Default       | Description                                                                                                        |
-| ---------------------- | ------ | ------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `BOT_TOKEN`            | string | N/A           | Bot token of the discord application (see: [this guide][bot-token-guide] if you don't have one yet)                |
-| `TVDB_API_KEY`         | string | N/A           | API key for TVDB (see [this page][tvdb-api-page] if you don't have one yet)                                        |
-| `SQLITE_DATABASE_FILE` | path   | ./database.db | Path to sqlite database file, can be relative to project root (if the file doesn't yet exists, it will be created) |
-| `ECHO_SQL`             | bool   | 0             | If `1`, print out every SQL command that SQLAlchemy library runs internally (can be useful when debugging)         |
-| `DEBUG`                | bool   | 0             | If `1`, debug logs will be enabled, if `0` only info logs and above will be shown                                  |
-| `LOG_FILE`             | path   | N/A           | If set, also write the logs into given file, otherwise, only print them                                            |
-| `TRACE_LEVEL_FILTER`   | custom | N/A           | Configuration for trace level logging, see: [trace logs config section](#trace-logs-config)                        |
+| Variable name              | Type   | Default       | Description                                                                                                         |
+| -------------------------- | ------ | ------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `BOT_TOKEN`                | string | N/A           | Bot token of the discord application (see: [this guide][bot-token-guide] if you don't have one yet)                 |
+| `TVDB_API_KEY`             | string | N/A           | API key for TVDB (see [this page][tvdb-api-page] if you don't have one yet)                                         |
+| `TVDB_RATE_LIMIT_REQUESTS` | int    | 5             | Amount of requests that the bot is allowed to make to the TVDB API within `TVDB_RATE_LIMIT_PERIOD`                  |
+| `TVDB_RATE_LIMIT_PERIOD`   | float  | 5             | Period of time in seconds, within which the bot can make up to `TVDB_RATE_LIMIT_REQUESTS` requests to the TVDB API. |
+| `SQLITE_DATABASE_FILE`     | path   | ./database.db | Path to sqlite database file, can be relative to project root (if the file doesn't yet exists, it will be created)  |
+| `ECHO_SQL`                 | bool   | 0             | If `1`, print out every SQL command that SQLAlchemy library runs internally (can be useful when debugging)          |
+| `DEBUG`                    | bool   | 0             | If `1`, debug logs will be enabled, if `0` only info logs and above will be shown                                   |
+| `LOG_FILE`                 | path   | N/A           | If set, also write the logs into given file, otherwise, only print them                                             |
+| `TRACE_LEVEL_FILTER`       | custom | N/A           | Configuration for trace level logging, see: [trace logs config section](#trace-logs-config)                         |
 
 [bot-token-guide]: https://guide.pycord.dev/getting-started/creating-your-first-bot#creating-the-bot-application
 [tvdb-api-page]: https://www.thetvdb.com/api-information
