@@ -9,3 +9,7 @@ services:
       - ./app:/app/app
     restart: unless-stopped
     stop_grace_period: 5s
+    develop:
+      watch:
+        - action: rebuild
+          path: requirements-dev.txt
