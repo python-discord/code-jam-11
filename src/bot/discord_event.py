@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
 import discord
 
@@ -20,6 +21,26 @@ class FakeUser:
 
 
 @dataclass
+class SerializableGuild:
+    id: int
+    name: str
+    verification_level: int
+
+
+@dataclass
+class SerializableTextChannel:
+    id: int
+    name: str
+
+
+@dataclass
+class SerializableUser:
+    id: int
+    name: str
+    display_name: str
+
+
+@dataclass
 class DiscordEvent:
     """A class representing a Discord event with relevant information.
 
@@ -27,16 +48,35 @@ class DiscordEvent:
     ----------
         type (str): The type of the Discord event.
         timestamp (datetime): The timestamp when the event occurred.
-        guild (discord.Guild): The Discord guild (server) where the event took place.
-        channel (discord.TextChannel): The specific text channel where the event occurred.
-        user (discord.User | FakeUser): The user who triggered the event, either a Discord user or a FakeUser.
+        guild (SerializableGuild): Serializable representation of the Discord guild.
+        channel (SerializableTextChannel): Serializable representation of the text channel.
+        user (SerializableUser | FakeUser): Serializable representation of the user or a FakeUser.
         content (str): The content or message associated with the event.
 
     """
 
     type: str
     timestamp: datetime
-    guild: discord.Guild
-    channel: discord.TextChannel
-    user: discord.User | FakeUser
+    guild: SerializableGuild
+    channel: SerializableTextChannel
+    user: SerializableUser | FakeUser
     content: str
+
+    @classmethod
+    def from_discord_objects(
+        cls,
+        type: str,
+        timestamp: datetime,
+        guild: Optional["discord.Guild"],
+        channel: Optional["discord.TextChannel"],
+        user: Optional["discord.User"],
+        content: str,
+    ):
+        return cls(
+            type=type,
+            timestamp=timestamp,
+            guild=SerializableGuild(guild.id, guild.name, guild.verification_level.value) if guild else None,
+            channel=SerializableTextChannel(channel.id, channel.name) if channel else None,
+            user=SerializableUser(user.id, user.name, user.display_name) if user else None,
+            content=content,
+        )

@@ -48,7 +48,7 @@ class EcoCordClient(discord.Client):
             message (discord.Message): The message that was sent.
 
         """
-        event = DiscordEvent(
+        event = DiscordEvent.from_discord_objects(
             type="message",
             timestamp=message.created_at,
             guild=message.guild,
@@ -70,7 +70,7 @@ class EcoCordClient(discord.Client):
         """
         channel = self.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        event = DiscordEvent(
+        event = DiscordEvent.from_discord_objects(
             type="reaction",
             timestamp=message.created_at,
             guild=self.get_guild(payload.guild_id),
@@ -91,7 +91,7 @@ class EcoCordClient(discord.Client):
 
         """
         channel = self.get_channel(payload.channel_id)
-        event = DiscordEvent(
+        event = DiscordEvent.from_discord_objects(
             type="typing",
             timestamp=payload.timestamp,
             guild=self.get_guild(payload.guild_id),

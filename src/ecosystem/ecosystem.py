@@ -513,18 +513,24 @@ class EcosystemManager:
         )
         ecosystem.setup_ui()
 
-        screen = pygame.display.set_mode((ecosystem.width, ecosystem.height))
-        pygame.display.set_caption(f"Ecosystem Visualization {multiprocessing.current_process().name}")
+        if self.interactive:
+            screen = pygame.display.set_mode((ecosystem.width, ecosystem.height))
+            pygame.display.set_caption(f"Ecosystem Visualization {multiprocessing.current_process().name}")
+        else:
+            # Create a hidden surface for rendering
+            screen = pygame.Surface((ecosystem.width, ecosystem.height))
+
         clock = pygame.time.Clock()
 
         while self.running:
             delta = clock.tick(self.fps) / 1000.0
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                elif show_controls and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    self._handle_mouse_click(ecosystem, event.pos)
+            if self.interactive:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.running = False
+                    elif show_controls and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        self._handle_mouse_click(ecosystem, event.pos)
 
             ecosystem.update(delta)
             screen.blit(ecosystem.draw(), (0, 0))
@@ -533,7 +539,8 @@ class EcosystemManager:
             if self.interactive and show_controls:
                 self._draw_controls(ecosystem, screen)
 
-            pygame.display.flip()
+            if self.interactive:
+                pygame.display.flip()
 
             if ecosystem.generate_gifs and not ecosystem.gif_info_queue.empty():
                 gif_data, timestamp = ecosystem.gif_info_queue.get()
@@ -600,15 +607,15 @@ class EcosystemManager:
         ecosystem.reset_button.draw(screen)
 
         activity_text = ecosystem.font.render(f"Activity: {ecosystem.activity:.2f}", True, (0, 0, 0))
-        screen.blit(activity_text, (ecosystem.activity_slider.x, ecosystem.activity_slider.y - 30))
+        screen.blit(activity_text, (ecosystem.activity_slider.x, ecosystem.activity_slider.y - 20))
 
         stats_text = ecosystem.font.render(
             f"Plants: {len(ecosystem.plants)} | Frogs: {len(ecosystem.frogs)} | Snakes: {len(ecosystem.snakes)} | "
-            "Birds: {len(ecosystem.birds)}",
+            f"Birds: {len(ecosystem.birds)}",
             True,
             (0, 0, 0),
         )
-        screen.blit(stats_text, (10, ecosystem.height - 30))
+        screen.blit(stats_text, (25, ecosystem.activity_slider.y + 70))
 
     def process_event(self, event: DiscordEvent) -> None:
         """Process a Discord event in the ecosystem.
