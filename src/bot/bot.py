@@ -7,9 +7,8 @@ import discord
 from discord import app_commands
 
 from ecosystem import EcosystemManager
-
 from .discord_event import DiscordEvent
-from .models import EventsDatabase, DBEvent, EventTypeEnum
+from .models import EventsDatabase, EventTypeEnum, event_db_builder
 from .settings import BOT_TOKEN, GIF_CHANNEL_ID, GUILD_ID
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
@@ -29,8 +28,8 @@ class EcoCordClient(discord.Client):
         self.test_guild = discord.Object(id=GUILD_ID)
         self.ecosystem_manager = None
         self.ready = False
-        self.guild = self.get_guild(GUILD_ID)
-        self.events_database = EventsDatabase(self.guild.name)
+        self.guild = None
+        self.events_database = None
 
     async def on_ready(self) -> None:
         """Event receiver for when the client is done preparing the data received from Discord.
@@ -40,6 +39,8 @@ class EcoCordClient(discord.Client):
         self.ready = True
         print(f"Logged in as {self.user} (ID: {self.user.id})")
         print("------")
+        self.guild = await self.fetch_guild(GUILD_ID)
+        self.events_database = EventsDatabase(self.guild.name)
         await self.events_database.load_table()
 
     async def on_message(self, message: discord.Message) -> None:
@@ -58,6 +59,7 @@ class EcoCordClient(discord.Client):
             guild=message.guild,
             channel=message.channel,
             user=message.author,
+            message=message,
             content=message.content,
         )
         await self.process_event(event)
@@ -202,16 +204,3 @@ class EcoCordClient(discord.Client):
         """Start the bot and connects to Discord."""
         print("Starting bot...")
         await self.start(BOT_TOKEN)
-
-
-async def event_db_builder(event: DiscordEvent) -> DBEvent:
-    message_id = event.message.id if event.type == EventTypeEnum.MESSAGE else None
-    return DBEvent(
-        event_type=event.type,
-        timestamp=event.timestamp.timestamp().__round__(),
-        guild_id=event.guild.id,
-        channel_id=event.channel.id,
-        member_id=event.user.id,
-        message_id=message_id,
-        content=event.content
-    )

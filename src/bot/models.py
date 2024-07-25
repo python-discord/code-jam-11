@@ -4,6 +4,8 @@ from enum import Enum
 
 import aiosqlite
 
+from bot.discord_event import DiscordEvent
+
 
 @dataclass
 class DBEvent:
@@ -30,7 +32,7 @@ class CommandType(str, Enum):
 
 class EventsDatabase:
     def __init__(self, guild_name: str):
-        self.db_name = guild_name.join("_events.db")
+        self.db_name = guild_name + "_events.db"
 
     async def execute(self, command: CommandType, query: str = None, parameters: tuple = None):
         async with aiosqlite.connect(self.db_name) as db:
@@ -73,7 +75,7 @@ class EventsDatabase:
 
     async def insert_event(self, event: DBEvent) -> None:
         query = """
-        INSERT INTO events(id, event_type, timestamp, guild_id, channel_id, member_id, message_id, message_cache)
+        INSERT INTO events(id, event_type, timestamp, guild_id, channel_id, member_id, message_id, content)
         VALUES(?,?,?,?,?,?,?,?)
         """
         data = (
@@ -96,3 +98,16 @@ class EventsDatabase:
         BETWEEN (?) AND (?)
         """
         await self.execute(command=CommandType.GET, query=query, parameters=(start_time, stop_time))
+
+
+async def event_db_builder(event: DiscordEvent) -> DBEvent:
+    message_id = event.message.id if event.type == EventTypeEnum.MESSAGE else None
+    return DBEvent(
+        event_type=event.type,
+        timestamp=event.timestamp.timestamp().__round__(),
+        guild_id=event.guild.id,
+        channel_id=event.channel.id,
+        member_id=event.user.id,
+        message_id=message_id,
+        content=event.content
+    )
