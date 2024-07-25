@@ -151,6 +151,7 @@ def rate_limited[T: Cog, **P](
     period: float | TransformFunction[T, float],
     update_when_exceeded: bool | TransformFunction[T, bool] = False,
     err_msg: str | None | TransformFunction[T, str | None] = None,
+    prefix_key: bool = False,
 ) -> Callable[[CogCommandFunction[T, P]], CogCommandFunction[T, P]]:
     """Apply rate limits to given cog command function.
 
@@ -161,9 +162,11 @@ def rate_limited[T: Cog, **P](
     This uses the :func:`rate_limit` function internally to enforce the rate limits.
     See its description for more info.
 
-    All of the parameters can be set directly, or they can be callables, which will get called
-    with self (the cog instance) and ctx, using the return value as the value of that parameter.
-    These parameters will then all be forwarded to the ``rate_limit`` function.
+    All of the parameters (except `prefix_key`) can be set directly, or they can be callables,
+    which will get called with self (the cog instance) and ctx, using the return value as the
+    value of that parameter. These parameters will then all be forwarded to the ``rate_limit`` function.
+
+    :param prefix_key: Whether to prefix the key with the hash of the slash command function object.
 
     .. note::
         Py-cord does provide a built-in way to rate-limit commands through "cooldown" structures.
@@ -193,6 +196,9 @@ def rate_limited[T: Cog, **P](
                 update_when_exceeded(self, ctx) if isinstance(update_when_exceeded, Callable) else update_when_exceeded
             )
             err_msg_ = err_msg(self, ctx) if isinstance(err_msg, Callable) else err_msg
+
+            if prefix_key:
+                key_ = f"{hash(func)}-{key_}"
 
             await rate_limit(
                 cache,
