@@ -9,6 +9,7 @@ from src.settings import THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
 from src.tvdb import FetchMeta, Movie, Series, TvdbClient
 from src.tvdb.errors import InvalidIdError
 from src.utils.log import get_logger
+from src.utils.ratelimit import rate_limited
 
 log = get_logger(__name__)
 
@@ -118,6 +119,7 @@ class InfoCog(Cog):
         required=False,
     )
     @option("by_id", input_type=bool, description="Search by tvdb ID.", required=False)
+    @rate_limited(key=lambda self, ctx: f"{ctx.user}", limit=2, period=8, update_when_exceeded=True, prefix_key=True)
     async def search(
         self,
         ctx: ApplicationContext,
