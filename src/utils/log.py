@@ -196,5 +196,6 @@ def _setup_external_log_levels(root_log: LoggerClass) -> None:
     get_logger("discord.gateway").setLevel(logging.WARNING)
     get_logger("aiosqlite").setLevel(logging.INFO)
     get_logger("alembic.runtime.migration").setLevel(logging.WARNING)
+    get_logger("aiocache.base").setLevel(logging.INFO)
 
     get_logger("parso").setLevel(logging.WARNING)  # For usage in IPython

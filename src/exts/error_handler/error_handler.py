@@ -1,12 +1,13 @@
 import textwrap
 from typing import cast
 
-from discord import Any, ApplicationContext, Cog, Colour, Embed, errors
+from discord import Any, ApplicationContext, Cog, Colour, Embed, EmbedField, EmbedFooter, errors
 from discord.ext.commands import errors as commands_errors
 
 from src.bot import Bot
 from src.settings import FAIL_EMOJI, GITHUB_REPO
 from src.utils.log import get_logger
+from src.utils.ratelimit import RateLimitExceededError
 
 log = get_logger(__name__)
 
@@ -23,12 +24,20 @@ class ErrorHandler(Cog):
         *,
         title: str | None = None,
         description: str | None = None,
+        fields: list[EmbedField] | None = None,
+        footer: EmbedFooter | None = None,
     ) -> None:
         """Send an embed regarding the unhandled exception that occurred."""
         if title is None and description is None:
             raise ValueError("You need to provide either a title or a description.")
 
-        embed = Embed(title=title, description=description, color=Colour.red())
+        embed = Embed(
+            title=title,
+            description=description,
+            color=Colour.red(),
+            fields=fields,
+            footer=footer,
+        )
         await ctx.respond(f"Sorry, {ctx.author.mention}", embed=embed)
 
     async def send_unhandled_embed(self, ctx: ApplicationContext, exc: BaseException) -> None:
@@ -128,6 +137,38 @@ class ErrorHandler(Cog):
 
         await self.send_unhandled_embed(ctx, exc)
 
+    async def _handle_command_invoke_error(
+        self,
+        ctx: ApplicationContext,
+        exc: errors.ApplicationCommandInvokeError,
+    ) -> None:
+        original_exception = exc.__cause__
+
+        if original_exception is None:
+            await self.send_unhandled_embed(ctx, exc)
+            log.exception("Got ApplicationCommandInvokeError without a cause.", exc_info=exc)
+            return
+
+        if isinstance(original_exception, RateLimitExceededError):
+            msg = original_exception.msg or "Hit a rate-limit, please try again later."
+            time_remaining = f"Expected reset: <t:{round(original_exception.closest_expiration)}:R>"
+            footer = None
+            if original_exception.updates_when_exceeded:
+                footer = EmbedFooter(
+                    text="Spamming the command will only increase the time you have to wait.",
+                )
+            await self.send_error_embed(
+                ctx,
+                title="Rate limit exceeded",
+                description=f"{FAIL_EMOJI} {msg}",
+                fields=[EmbedField(name="", value=time_remaining)],
+                footer=footer,
+            )
+            return
+
+        await self.send_unhandled_embed(ctx, original_exception)
+        log.exception("Unhandled exception occurred.", exc_info=original_exception)
+
     @Cog.listener()
     async def on_application_command_error(self, ctx: ApplicationContext, exc: errors.DiscordException) -> None:
         """Handle exceptions that have occurred while running some command."""
@@ -136,12 +177,8 @@ class ErrorHandler(Cog):
             return
 
         if isinstance(exc, errors.ApplicationCommandInvokeError):
-            original_exception = exc.__cause__
-
-            if original_exception is not None:
-                await self.send_unhandled_embed(ctx, original_exception)
-                log.exception("Unhandled exception occurred.", exc_info=original_exception)
-                return
+            await self._handle_command_invoke_error(ctx, exc)
+            return
 
         await self.send_unhandled_embed(ctx, exc)
 

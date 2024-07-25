@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 from typing import Literal
 
-import aiohttp
 import discord
 from discord import ApplicationContext, Cog, option, slash_command
 
@@ -10,6 +9,7 @@ from src.settings import THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
 from src.tvdb import FetchMeta, Movie, Series, TvdbClient
 from src.tvdb.errors import InvalidIdError
 from src.utils.log import get_logger
+from src.utils.ratelimit import rate_limited
 
 log = get_logger(__name__)
 
@@ -106,6 +106,7 @@ class InfoCog(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.tvdb_client = TvdbClient(self.bot.http_session, self.bot.cache)
 
     @slash_command()
     @option("query", input_type=str, description="The query to search for.")
@@ -118,6 +119,7 @@ class InfoCog(Cog):
         required=False,
     )
     @option("by_id", input_type=bool, description="Search by tvdb ID.", required=False)
+    @rate_limited(key=lambda self, ctx: f"{ctx.user}", limit=2, period=8, update_when_exceeded=True, prefix_key=True)
     async def search(
         self,
         ctx: ApplicationContext,
@@ -128,37 +130,40 @@ class InfoCog(Cog):
     ) -> None:
         """Search for a movie or series."""
         await ctx.defer()
-        async with aiohttp.ClientSession() as session:
-            client = TvdbClient(session, self.bot.cache)
-            if by_id:
-                if query.startswith("movie-"):
-                    entity_type = "movie"
-                    query = query[6:]
-                elif query.startswith("series-"):
-                    entity_type = "series"
-                    query = query[7:]
-                try:
-                    match entity_type:
-                        case "movie":
-                            response = [await Movie.fetch(query, client, extended=True, meta=FetchMeta.TRANSLATIONS)]
-                        case "series":
-                            response = [await Series.fetch(query, client, extended=True, meta=FetchMeta.TRANSLATIONS)]
-                        case None:
-                            await ctx.respond(
-                                "You must specify a type (movie or series) when searching by ID.", ephemeral=True
-                            )
-                            return
-                except InvalidIdError:
-                    await ctx.respond(
-                        'Invalid ID. Id must be an integer, or "movie-" / "series-" followed by an integer.',
-                        ephemeral=True,
-                    )
-                    return
-            else:
-                response = await client.search(query, limit=5, entity_type=entity_type)
-                if not response:
-                    await ctx.respond("No results found.")
-                    return
+
+        if by_id:
+            if query.startswith("movie-"):
+                entity_type = "movie"
+                query = query[6:]
+            elif query.startswith("series-"):
+                entity_type = "series"
+                query = query[7:]
+            try:
+                match entity_type:
+                    case "movie":
+                        response = [
+                            await Movie.fetch(query, self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS)
+                        ]
+                    case "series":
+                        response = [
+                            await Series.fetch(query, self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS)
+                        ]
+                    case None:
+                        await ctx.respond(
+                            "You must specify a type (movie or series) when searching by ID.", ephemeral=True
+                        )
+                        return
+            except InvalidIdError:
+                await ctx.respond(
+                    'Invalid ID. Id must be an integer, or "movie-" / "series-" followed by an integer.',
+                    ephemeral=True,
+                )
+                return
+        else:
+            response = await self.tvdb_client.search(query, limit=5, entity_type=entity_type)
+            if not response:
+                await ctx.respond("No results found.")
+                return
         view = InfoView(response)
         await view.send(ctx)
 

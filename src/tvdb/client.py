@@ -6,7 +6,7 @@ import aiohttp
 from aiocache import BaseCache
 from yarl import URL
 
-from src.settings import TVDB_API_KEY
+from src.settings import TVDB_API_KEY, TVDB_RATE_LIMIT_PERIOD, TVDB_RATE_LIMIT_REQUESTS
 from src.tvdb.generated_models import (
     MovieBaseRecord,
     MovieExtendedRecord,
@@ -21,6 +21,7 @@ from src.tvdb.generated_models import (
 )
 from src.utils.iterators import get_first
 from src.utils.log import get_logger
+from src.utils.ratelimit import rate_limit
 
 from .errors import BadCallError, InvalidApiKeyError, InvalidIdError
 
@@ -265,6 +266,16 @@ class TvdbClient:
     ) -> JSON_DATA:
         """Make an authorized request to the TVDB API."""
         log.trace(f"Making TVDB {method} request to {endpoint}")
+
+        # TODO: It would be better to instead use a queue to handle rate-limits
+        # and block until the next request can be made.
+        await rate_limit(
+            self.cache,
+            "tvdb",
+            limit=TVDB_RATE_LIMIT_REQUESTS,
+            period=TVDB_RATE_LIMIT_PERIOD,
+            err_msg="Bot wide rate-limit for TheTVDB API was exceeded.",
+        )
 
         if self.auth_token is None:
             log.trace("No auth token found, requesting initial login.")
