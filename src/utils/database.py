@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import NoReturn
 
 import alembic.config
+from alembic.operations import Operations
 from alembic.runtime.environment import EnvironmentContext
 from alembic.runtime.migration import MigrationContext, RevisionStep
 from alembic.script import ScriptDirectory
@@ -110,7 +111,7 @@ def apply_db_migrations(db_conn: Connection) -> None:
         return
 
     log.debug("Checking for database migrations")
-    with context.begin_transaction():
+    with Operations.context(context) as _op, context.begin_transaction():
         context.run_migrations()
 
 
