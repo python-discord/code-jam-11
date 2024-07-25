@@ -5,7 +5,24 @@ import pygame
 
 
 class Critter:
+    """Represents a critter in the ecosystem simulation.
+
+    This class defines the properties and behaviors of a critter, including
+    its appearance, movement, and lifecycle.
+    """
+
     def __init__(self, member_id: int, x: float, y: float, width: int, height: int) -> None:
+        """Initialize a new Critter instance.
+
+        Args:
+        ----
+            member_id (int): Unique identifier for the critter.
+            x (float): Initial x-coordinate of the critter.
+            y (float): Initial y-coordinate of the critter.
+            width (int): Width of the ecosystem area.
+            height (int): Height of the ecosystem area.
+
+        """
         self.member_id = member_id
         self.x = x
         self.y = y
@@ -29,12 +46,18 @@ class Critter:
         self.alive = True
 
     def update(self, delta: float, activity: float) -> None:
+        """Update the critter's state and position.
+
+        Args:
+        ----
+            delta (float): Time elapsed since the last update.
+            activity (float): Current activity level in the ecosystem.
+
+        """
         self.state_time += delta
 
         if self.state == "rest":
             pass
-            # if self.state_time >= self.rest_duration:
-            #     self.start_jump()
         elif self.state == "jump":
             progress = self.state_time / self.jump_duration
             if progress <= 1:
@@ -49,6 +72,10 @@ class Critter:
             self.alive = False
 
     def start_jump(self) -> None:
+        """Initiate a jump for the critter.
+
+        This method sets up the parameters for a jump, including the target position.
+        """
         self.state = "jump"
         self.state_time = 0
         self.jump_start_y = self.y
@@ -56,6 +83,13 @@ class Critter:
         self.jump_target_x = max(0, min(self.width, self.x + random.uniform(-jump_distance, jump_distance)))
 
     def draw(self, surface: pygame.Surface) -> None:
+        """Draw the critter on the given surface.
+
+        Args:
+        ----
+            surface (pygame.Surface): The surface to draw the critter on.
+
+        """
         self.scale = 0.5 + (self.y / self.height) * 0.5
 
         scaled_size = int(self.size * self.scale)
@@ -77,10 +111,18 @@ class Critter:
         pygame.draw.arc(surface, (50, 50, 50), mouth_rect, math.pi, 2 * math.pi, 2)
 
     def spawn(self) -> None:
+        """Spawn the critter in the ecosystem.
+
+        This method resets the critter's position and sets it as alive.
+        """
         self.alive = True
         self.y = self.height
         self.x = random.randint(0, self.width)
         self.scale = 0.1
 
     def despawn(self) -> None:
+        """Despawn the critter from the ecosystem.
+
+        This method marks the critter as not alive.
+        """
         self.alive = False

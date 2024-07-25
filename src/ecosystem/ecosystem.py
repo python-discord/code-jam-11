@@ -5,7 +5,6 @@ import multiprocessing
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import discord.member
 import numpy as np
 
 from .shared_numpy_array import SharedNumpyArray
@@ -18,12 +17,8 @@ import random
 
 from PIL import Image
 
-from bot.discord_event import DiscordEvent, EventType
+from bot.discord_event import DiscordEvent
 
-from .bird import Bird
-from .frog import Frog
-from .plant import Plant
-from .snake import Snake
 from .critter import Critter
 
 
@@ -74,10 +69,7 @@ class Ecosystem:
 
         self.font = None
         self.activity_slider = None
-        self.spawn_plant_button = None
-        self.spawn_frog_button = None
-        self.spawn_snake_button = None
-        self.spawn_bird_button = None
+        self.spawn_critter_button = None
         self.reset_button = None
 
         self.generate_gifs = generate_gifs
@@ -120,52 +112,19 @@ class Ecosystem:
 
         button_y = top_margin + self.activity_slider.height + button_spacing
 
-        self.spawn_plant_button = Button(
+        self.spawn_critter_button = Button(
             left_margin,
             button_y,
             button_width,
             button_height,
-            "Spawn Plant",
+            "Spawn Critter",
             (0, 255, 0),
             (0, 0, 0),
             self.font,
         )
 
-        self.spawn_frog_button = Button(
-            left_margin + button_width + button_spacing,
-            button_y,
-            button_width,
-            button_height,
-            "Spawn Frog",
-            (0, 0, 255),
-            (255, 255, 255),
-            self.font,
-        )
-
-        self.spawn_snake_button = Button(
-            left_margin + (button_width + button_spacing) * 2,
-            button_y,
-            button_width,
-            button_height,
-            "Spawn Snake",
-            (255, 200, 0),
-            (0, 0, 0),
-            self.font,
-        )
-
-        self.spawn_bird_button = Button(
-            left_margin + (button_width + button_spacing) * 3,
-            button_y,
-            button_width,
-            button_height,
-            "Spawn Bird",
-            (100, 100, 255),
-            (255, 255, 255),
-            self.font,
-        )
-
         self.reset_button = Button(
-            left_margin + (button_width + button_spacing) * 4,
+            left_margin + button_width + button_spacing,
             button_y,
             button_width,
             button_height,
@@ -202,16 +161,7 @@ class Ecosystem:
 
         """
         if random.random() < self.activity * delta:
-            self.spawn_plant()
-
-        if random.random() < self.activity * delta * 0.5:
-            self.spawn_frog()
-
-        if random.random() < self.activity * delta * 0.3:
-            self.spawn_snake()
-
-        if random.random() < self.activity * delta * 0.4:
-            self.spawn_bird()
+            self.spawn_critter()
 
     def _clean_up_entities(self) -> None:
         """Remove dead entities from the ecosystem."""
@@ -276,34 +226,9 @@ class Ecosystem:
         """
         return tuple(int(c1 + (c2 - c1) * t) for c1, c2 in zip(color1, color2, strict=False))
 
-    def spawn_plant(self) -> None:
-        """Spawn a new plant in the ecosystem."""
-        self.plants.append(Plant(random.randint(0, self.width), self.height * 0.7))
-
-    def spawn_frog(self) -> None:
-        """Spawn a new frog in the ecosystem."""
-        new_frog = Frog(random.randint(0, self.width), self.height - 20, self.width, self.height)
-        new_frog.spawn()
-        self.frogs.append(new_frog)
-
-    def spawn_snake(self) -> None:
-        """Spawn a new snake in the ecosystem."""
-        new_snake = Snake(random.randint(0, self.width), self.height * 0.7, self.width, self.height)
-        new_snake.spawn()
-        self.snakes.append(new_snake)
-
-    def spawn_bird(self) -> None:
-        """Spawn a new bird in the ecosystem."""
-        new_bird = Bird(self.width, self.height)
-        new_bird.spawn()
-        self.birds.append(new_bird)
-
     def reset(self) -> None:
         """Reset the ecosystem to its initial state."""
-        self.plants.clear()
-        self.frogs.clear()
-        self.snakes.clear()
-        self.birds.clear()
+        self.critters.clear()
         self.activity = 1
         self.elapsed_time = 0
 
@@ -369,6 +294,18 @@ class Ecosystem:
             self.frame_count_queue.put(None)
 
             self.gif_process.join()
+
+    def spawn_critter(self) -> None:
+        """Spawn a new critter in the ecosystem."""
+        new_critter = Critter(
+            member_id=random.randint(1, 1000000),  # Generate a random ID for non-user critters
+            x=random.randint(0, self.width),
+            y=self.height - 20,  # Spawn near the ground
+            width=self.width,
+            height=self.height,
+        )
+        new_critter.spawn()  # Call the spawn method to initialize the critter
+        self.critters.append(new_critter)
 
 
 class Button:
@@ -555,14 +492,8 @@ class EcosystemManager:
         """
         if ecosystem.activity_slider.collidepoint(pos):
             ecosystem.activity = (pos[0] - ecosystem.activity_slider.x) / ecosystem.activity_slider.width
-        elif ecosystem.spawn_plant_button.is_clicked(pos):
-            ecosystem.spawn_plant()
-        elif ecosystem.spawn_frog_button.is_clicked(pos):
-            ecosystem.spawn_frog()
-        elif ecosystem.spawn_snake_button.is_clicked(pos):
-            ecosystem.spawn_snake()
-        elif ecosystem.spawn_bird_button.is_clicked(pos):
-            ecosystem.spawn_bird()
+        elif ecosystem.spawn_critter_button.is_clicked(pos):
+            ecosystem.spawn_critter()
         elif ecosystem.reset_button.is_clicked(pos):
             ecosystem.reset()
 
@@ -587,18 +518,14 @@ class EcosystemManager:
             ),
         )
 
-        ecosystem.spawn_plant_button.draw(screen)
-        ecosystem.spawn_frog_button.draw(screen)
-        ecosystem.spawn_snake_button.draw(screen)
-        ecosystem.spawn_bird_button.draw(screen)
+        ecosystem.spawn_critter_button.draw(screen)
         ecosystem.reset_button.draw(screen)
 
         activity_text = ecosystem.font.render(f"Activity: {ecosystem.activity:.2f}", True, (0, 0, 0))
         screen.blit(activity_text, (ecosystem.activity_slider.x, ecosystem.activity_slider.y - 20))
 
         stats_text = ecosystem.font.render(
-            f"Plants: {len(ecosystem.plants)} | Frogs: {len(ecosystem.frogs)} | Snakes: {len(ecosystem.snakes)} | "
-            f"Birds: {len(ecosystem.birds)}",
+            f"Critters: {len(ecosystem.critters)}",
             True,
             (0, 0, 0),
         )
@@ -655,7 +582,6 @@ class EcosystemManager:
         for member in online_members:
             self._spawn_new_critter(member)
             print(f"{member}'s critter spawned")
-
 
     def _spawn_new_critter(self, user_id: int) -> None:
         if user_id not in self.user_frogs:

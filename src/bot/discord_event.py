@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
 from enum import Flag, auto
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     import discord
@@ -23,6 +23,21 @@ class FakeUser:
 
 
 class EventType(Flag):
+    """EventType is an enumeration that represents different types of events that can occur in a Discord server.
+
+    Attributes
+    ----------
+    ON_LOAD : auto
+        Represents the event when the ecosystem is loaded.
+    MESSAGE : auto
+        Represents the event when a message is sent.
+    REACTION : auto
+        Represents the event when a reaction is added to a message.
+    TYPING : auto
+        Represents the event when a user starts typing.
+
+    """
+
     ON_LOAD = auto()
     MESSAGE = auto()
     REACTION = auto()
@@ -62,20 +77,22 @@ class SerializableTextChannel:
 
 
 @dataclass
-class SerializableUser:
-    """Serializable representation of a Discord user.
+class SerializableMember:
+    """Serializable representation of a Discord member.
 
     Attributes
     ----------
-        id (int): The unique identifier of the user.
-        name (str): The username of the user.
-        display_name (str): The display name of the user.
+        id (int): The unique identifier of the member.
+        name (str): The username of the member.
+        display_name (str): The display name of the member.
+        roles (list[int]): List of role IDs the member has.
 
     """
 
     id: int
     name: str
     display_name: str
+    roles: list[int]
 
 
 @dataclass
@@ -88,7 +105,7 @@ class DiscordEvent:
         timestamp (datetime): The timestamp when the event occurred.
         guild (SerializableGuild): Serializable representation of the Discord guild.
         channel (SerializableTextChannel): Serializable representation of the text channel.
-        user (SerializableUser | FakeUser): Serializable representation of the user or a FakeUser.
+        member (SerializableMember | FakeUser): Serializable representation of the member or a FakeUser.
         content (str): The content or message associated with the event.
 
     """
@@ -97,7 +114,7 @@ class DiscordEvent:
     timestamp: datetime
     guild: SerializableGuild
     channel: SerializableTextChannel
-    user: SerializableUser | FakeUser
+    member: SerializableMember | FakeUser
     content: str
 
     @classmethod
@@ -107,7 +124,7 @@ class DiscordEvent:
         timestamp: datetime,
         guild: Optional["discord.Guild"],
         channel: Optional["discord.TextChannel"],
-        user: Optional["discord.User"],
+        member: Optional["discord.Member"],
         content: str,
     ) -> "DiscordEvent":
         return cls(
@@ -115,6 +132,8 @@ class DiscordEvent:
             timestamp=timestamp,
             guild=SerializableGuild(guild.id, guild.name, guild.verification_level.value) if guild else None,
             channel=SerializableTextChannel(channel.id, channel.name) if channel else None,
-            user=SerializableUser(user.id, user.name, user.display_name) if user else None,
+            member=SerializableMember(member.id, member.name, member.display_name, [role.id for role in member.roles])
+            if member
+            else None,
             content=content,
         )
