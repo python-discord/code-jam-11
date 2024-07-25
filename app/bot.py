@@ -1,6 +1,6 @@
 import logging
 
-from discord import Intents, Object
+from discord import Client, Intents, Object
 from discord.ext import commands
 from discord.interactions import Interaction
 
@@ -34,6 +34,6 @@ bot = Bot(settings)
     description="CodeJam Hello World!",
     guild=Object(id=settings.GUILD_ID),
 )
-async def hello_world(interaction: Interaction) -> None:
+async def hello_world(interaction: Interaction[Client]) -> None:
     """Says hello world."""
     await interaction.response.send_message("Hello World!")

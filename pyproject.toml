@@ -21,7 +21,7 @@ build-backend = "poetry.core.masonry.api"
 # Increase the line length. This breaks PEP8 but it is way easier to work with.
 # The original reason for this limit was a standard vim terminal is only 79 characters,
 # but this doesn't really apply anymore.
-line-length = 119
+line-length = 79
 # Target Python 3.12. If you decide to use a different version of Python
 # you will need to update this value.
 target-version = "py312"
