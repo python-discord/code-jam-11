@@ -9,6 +9,7 @@ from discord import app_commands
 from ecosystem import EcosystemManager
 
 from .discord_event import DiscordEvent
+from .models import Database, DBEvent, EventTypeEnum
 from .settings import BOT_TOKEN, GIF_CHANNEL_ID, GUILD_ID
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
@@ -22,11 +23,14 @@ class EcoCordClient(discord.Client):
     def __init__(self) -> None:
         """Initialize the EcoCordClient with default intents and set up necessary attributes."""
         intents = discord.Intents.default()
+        intents.message_content = True
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
         self.test_guild = discord.Object(id=GUILD_ID)
         self.ecosystem_manager = None
         self.ready = False
+        self.guild = self.get_guild(GUILD_ID)
+        self.events_database = Database(self.guild.name)
 
     async def on_ready(self) -> None:
         """Event receiver for when the client is done preparing the data received from Discord.
@@ -36,6 +40,7 @@ class EcoCordClient(discord.Client):
         self.ready = True
         print(f"Logged in as {self.user} (ID: {self.user.id})")
         print("------")
+        await self.events_database.load_table()
 
     async def on_message(self, message: discord.Message) -> None:
         """Event receiver for when a message is sent in a visible channel.
@@ -48,7 +53,7 @@ class EcoCordClient(discord.Client):
 
         """
         event = DiscordEvent(
-            type="message",
+            type=EventTypeEnum.MESSAGE,
             timestamp=message.created_at,
             guild=message.guild,
             channel=message.channel,
@@ -70,11 +75,12 @@ class EcoCordClient(discord.Client):
         channel = self.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         event = DiscordEvent(
-            type="reaction",
+            type=EventTypeEnum.REACTION,
             timestamp=message.created_at,
             guild=self.get_guild(payload.guild_id),
             channel=channel,
             user=payload.member,
+            message=message,
             content=f"{payload.emoji} added on {message.content}",
         )
         await self.process_event(event)
@@ -91,11 +97,12 @@ class EcoCordClient(discord.Client):
         """
         channel = self.get_channel(payload.channel_id)
         event = DiscordEvent(
-            type="typing",
+            type=EventTypeEnum.TYPING,
             timestamp=payload.timestamp,
             guild=self.get_guild(payload.guild_id),
             channel=channel,
             user=payload.user,
+            message=None,
             content="User is typing",
         )
         await self.process_event(event)
@@ -113,6 +120,8 @@ class EcoCordClient(discord.Client):
         )
         if self.ecosystem_manager:
             self.ecosystem_manager.process_event(event)
+        db_event = await event_db_builder(event)
+        await self.events_database.insert_event(db_event)
 
     async def start_ecosystem(self) -> None:
         """Initialize and start the ecosystem manager."""
@@ -193,3 +202,16 @@ class EcoCordClient(discord.Client):
         """Start the bot and connects to Discord."""
         print("Starting bot...")
         await self.start(BOT_TOKEN)
+
+
+async def event_db_builder(event: DiscordEvent) -> DBEvent:
+    message_id = event.message.id if event.type == EventTypeEnum.MESSAGE else None
+    return DBEvent(
+        event_type=event.type,
+        timestamp=event.timestamp.timestamp().__round__(),
+        guild_id=event.guild.id,
+        channel_id=event.channel.id,
+        member_id=event.user.id,
+        message_id=message_id,
+        content=event.content
+    )
