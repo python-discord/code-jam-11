@@ -4,6 +4,7 @@ from typing import Any, ClassVar, override
 
 import aiohttp
 import discord
+from aiocache import BaseCache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.utils.log import get_logger
@@ -32,12 +33,14 @@ class Bot(discord.Bot):
         *args: object,
         http_session: aiohttp.ClientSession,
         db_session: AsyncSession,
+        cache: BaseCache,
         **kwargs: object,
     ) -> None:
         """Initialize the bot instance, containing various state variables."""
         super().__init__(*args, **kwargs)
         self.http_session = http_session
         self.db_session = db_session
+        self.cache = cache
 
         self.event(self.on_ready)
 
