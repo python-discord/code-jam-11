@@ -2,6 +2,7 @@ import asyncio
 
 import aiohttp
 import discord
+from aiocache import SimpleMemoryCache
 
 from src.bot import Bot
 from src.settings import BOT_TOKEN, SQLITE_DATABASE_FILE
@@ -46,8 +47,10 @@ async def main() -> None:
 
     await _init_database()
 
+    cache = SimpleMemoryCache()
+
     async with aiohttp.ClientSession() as http_session, get_db_session() as db_session:
-        bot = Bot(intents=intents, http_session=http_session, db_session=db_session)
+        bot = Bot(intents=intents, http_session=http_session, db_session=db_session, cache=cache)
         bot.load_all_extensions()
 
         log.info("Starting the bot...")

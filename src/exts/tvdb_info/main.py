@@ -129,7 +129,7 @@ class InfoCog(Cog):
         """Search for a movie or series."""
         await ctx.defer()
         async with aiohttp.ClientSession() as session:
-            client = TvdbClient(session)
+            client = TvdbClient(session, self.bot.cache)
             if by_id:
                 if query.startswith("movie-"):
                     entity_type = "movie"

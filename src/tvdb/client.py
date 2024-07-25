@@ -3,7 +3,7 @@ from enum import Enum
 from typing import ClassVar, Literal, Self, final, overload, override
 
 import aiohttp
-from aiocache import SimpleMemoryCache
+from aiocache import BaseCache
 from yarl import URL
 
 from src.settings import TVDB_API_KEY
@@ -48,9 +48,6 @@ def parse_media_id(media_id: int | str) -> int:
         raise InvalidIdError("Invalid media ID.")
     else:
         return media_id
-
-
-cache = SimpleMemoryCache()
 
 
 class _Media(ABC):
@@ -175,7 +172,7 @@ class _Media(ABC):
             cache_key += f"_{bool(short)}"
             if meta:
                 cache_key += f"_{meta.value}"
-        response = await cache.get(cache_key)
+        response = await client.cache.get(cache_key, namespace=f"tvdb_{cls.ENDPOINT}")
         query: dict[str, str] = {}
         if extended:
             if meta:
@@ -194,7 +191,7 @@ class _Media(ABC):
                 f"{cls.ENDPOINT}/{media_id}" + ("/extended" if extended else ""),
                 query=query if query else None,
             )
-            await cache.set(key=cache_key, value=response)
+            await client.cache.set(key=cache_key, value=response, ttl=60 * 60, namespace=f"tvdb_{cls.ENDPOINT}")
             log.trace(f"Stored into cache: {cache_key}")
         else:
             log.trace(f"Loaded from cache: {cache_key}")
@@ -240,9 +237,10 @@ class TvdbClient:
 
     BASE_URL: ClassVar[URL] = URL("https://api4.thetvdb.com/v4/")
 
-    def __init__(self, http_session: aiohttp.ClientSession):
+    def __init__(self, http_session: aiohttp.ClientSession, cache: BaseCache):
         self.http_session = http_session
         self.auth_token = None
+        self.cache = cache
 
     @overload
     async def request(
@@ -290,13 +288,13 @@ class TvdbClient:
     ) -> list[Movie | Series]:
         """Search for a series or movie in the TVDB database."""
         cache_key: str = f"{search_query}_{entity_type}_{limit}"
-        data = await cache.get(cache_key)
+        data = await self.cache.get(cache_key, namespace="tvdb_search")
         if not data:
             query: dict[str, str] = {"query": search_query, "limit": str(limit)}
             if entity_type:
                 query["type"] = entity_type
             data = await self.request("GET", "search", query=query)
-            await cache.set(key=cache_key, value=data)
+            await self.cache.set(key=cache_key, value=data, ttl=60 * 60, namespace="tvdb_search")
             log.trace(f"Stored into cache: {cache_key}")
         else:
             log.trace(f"Loaded from cache: {cache_key}")
