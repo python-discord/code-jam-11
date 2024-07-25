@@ -1,7 +1,6 @@
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 import aiosqlite
 
@@ -13,8 +12,8 @@ class DBEvent:
     guild_id: int
     channel_id: int
     member_id: int
-    message_id: Optional[int]
-    content: Optional[str]
+    message_id: int | None
+    content: str | None
 
 
 class EventTypeEnum(str, Enum):
@@ -33,33 +32,41 @@ class EventsDatabase:
     def __init__(self, guild_name: str):
         self.db_name = guild_name.join("_events.db")
 
-    async def execute(self, command: CommandType, query: str = None, data: tuple = None):
+    async def execute(self, command: CommandType, query: str = None, parameters: tuple = None):
         async with aiosqlite.connect(self.db_name) as db:
             cursor = await db.cursor()
             match command:
                 case CommandType.ON_LOAD:
-                    await cursor.execute(query)
-                    await db.commit()
-                    print(f"database loaded successfully.")
+                    try:
+                        await cursor.execute(query)
+                        await db.commit()
+                    except aiosqlite.DatabaseError as e:
+                        print(f"DB ONLOAD ERROR: {e}")
+                    print("database loaded successfully.")
                 case CommandType.INSERT:
-                    await cursor.execute(query, data)
-                    await db.commit()
-                    print(f"database insert successfully.")
+                    try:
+                        await cursor.execute(query, parameters)
+                        await db.commit()
+                    except aiosqlite.DatabaseError as e:
+                        print(f"DB INSERT ERROR: {e}")
+                    print("database insert successfully.")
                 case CommandType.GET:
-                    result = await db.execute(query)
-                    return await result.fechall()
+                    try:
+                        await db.execute_fetchall(query, parameters)
+                    except aiosqlite.DatabaseError as e:
+                        print(f"DB READ ERROR: {e}")
 
     async def load_table(self) -> None:
         query = """
         CREATE TABLE IF NOT EXISTS events (
         id TEXT NOT NULL PRIMARY KEY,
-        event_type TEXT NOT NULL, 
-        timestamp INT NOT NULL, 
-        guild_id INT NOT NULL, 
-        channel_id INT NOT NULL, 
-        member_id INT NOT NULL, 
-        message_id TEXT, 
-        content TEXT 
+        event_type TEXT NOT NULL,
+        timestamp INT NOT NULL,
+        guild_id INT NOT NULL,
+        channel_id INT NOT NULL,
+        member_id INT NOT NULL,
+        message_id TEXT,
+        content TEXT
         )
         """
         await self.execute(command=CommandType.ON_LOAD, query=query)
@@ -69,12 +76,23 @@ class EventsDatabase:
         INSERT INTO events(id, event_type, timestamp, guild_id, channel_id, member_id, message_id, message_cache)
         VALUES(?,?,?,?,?,?,?,?)
         """
-        data = (str(uuid.uuid4()), event.event_type, event.timestamp, event.guild_id, event.channel_id, event.member_id,
-                event.message_id, event.content)
-        await self.execute(command=CommandType.INSERT, query=query, data=data)
+        data = (
+            str(uuid.uuid4()),
+            event.event_type,
+            event.timestamp,
+            event.guild_id,
+            event.channel_id,
+            event.member_id,
+            event.message_id,
+            event.content
+        )
+        await self.execute(command=CommandType.INSERT, query=query, parameters=data)
 
     async def get_events(self, start_time: int, stop_time: int):
         query = """
-        SELECT event_type, timestamp, guild_id, channel_id, member_id, message_id, content FROM events WHERE timestamp BETWEEN {} AND {}
-        """.format(start_time, stop_time)
-        await self.execute(command=CommandType.GET, query=query)
+        SELECT event_type, timestamp, guild_id, channel_id, member_id, message_id, content
+        FROM events
+        WHERE timestamp
+        BETWEEN (?) AND (?)
+        """
+        await self.execute(command=CommandType.GET, query=query, parameters=(start_time, stop_time))
