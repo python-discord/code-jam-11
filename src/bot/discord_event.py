@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
 import discord
 
@@ -39,4 +40,5 @@ class DiscordEvent:
     guild: discord.Guild
     channel: discord.TextChannel
     user: discord.User | FakeUser
+    message: Optional[discord.Message]
     content: str
