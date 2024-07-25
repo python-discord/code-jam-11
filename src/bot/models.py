@@ -29,7 +29,7 @@ class CommandType(str, Enum):
     INSERT = "insert"
 
 
-class Database:
+class EventsDatabase:
     def __init__(self, guild_name: str):
         self.db_name = guild_name.join("_events.db")
 
@@ -46,8 +46,8 @@ class Database:
                     await db.commit()
                     print(f"database insert successfully.")
                 case CommandType.GET:
-                    cursor = await db.execute(query)
-                    return await cursor.fechall()
+                    result = await db.execute(query)
+                    return await result.fechall()
 
     async def load_table(self) -> None:
         query = """

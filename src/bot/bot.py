@@ -9,7 +9,7 @@ from discord import app_commands
 from ecosystem import EcosystemManager
 
 from .discord_event import DiscordEvent
-from .models import Database, DBEvent, EventTypeEnum
+from .models import EventsDatabase, DBEvent, EventTypeEnum
 from .settings import BOT_TOKEN, GIF_CHANNEL_ID, GUILD_ID
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
@@ -30,7 +30,7 @@ class EcoCordClient(discord.Client):
         self.ecosystem_manager = None
         self.ready = False
         self.guild = self.get_guild(GUILD_ID)
-        self.events_database = Database(self.guild.name)
+        self.events_database = EventsDatabase(self.guild.name)
 
     async def on_ready(self) -> None:
         """Event receiver for when the client is done preparing the data received from Discord.
