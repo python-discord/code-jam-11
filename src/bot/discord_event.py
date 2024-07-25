@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-import discord
+if TYPE_CHECKING:
+    import discord
 
 
 @dataclass
@@ -22,6 +23,16 @@ class FakeUser:
 
 @dataclass
 class SerializableGuild:
+    """Serializable representation of a Discord guild.
+
+    Attributes
+    ----------
+        id (int): The unique identifier of the guild.
+        name (str): The name of the guild.
+        verification_level (int): The verification level of the guild.
+
+    """
+
     id: int
     name: str
     verification_level: int
@@ -29,12 +40,31 @@ class SerializableGuild:
 
 @dataclass
 class SerializableTextChannel:
+    """Serializable representation of a Discord text channel.
+
+    Attributes
+    ----------
+        id (int): The unique identifier of the text channel.
+        name (str): The name of the text channel.
+
+    """
+
     id: int
     name: str
 
 
 @dataclass
 class SerializableUser:
+    """Serializable representation of a Discord user.
+
+    Attributes
+    ----------
+        id (int): The unique identifier of the user.
+        name (str): The username of the user.
+        display_name (str): The display name of the user.
+
+    """
+
     id: int
     name: str
     display_name: str
@@ -71,7 +101,7 @@ class DiscordEvent:
         channel: Optional["discord.TextChannel"],
         user: Optional["discord.User"],
         content: str,
-    ):
+    ) -> "DiscordEvent":
         return cls(
             type=type,
             timestamp=timestamp,
