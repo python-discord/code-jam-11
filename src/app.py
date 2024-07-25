@@ -23,11 +23,8 @@ async def run_discord_bot(test_mode: bool = True) -> None:
     """
     loop = asyncio.get_event_loop()
     client = TestEcoCordClient() if test_mode else EcoCordClient()
-    gif_task = None
 
     try:
-        await client.start_ecosystem()
-        gif_task = asyncio.create_task(client.send_gifs())
         await client.run_bot()
     except KeyboardInterrupt:
         print("KeyboardInterrupt received. Shutting down...")
@@ -35,9 +32,7 @@ async def run_discord_bot(test_mode: bool = True) -> None:
         raise
     finally:
         print("Cleaning up...")
-        await client.stop_ecosystem()
-        if gif_task:
-            gif_task.cancel()
+        await client.stop_ecosystems()
         await client.close()
         await loop.shutdown_asyncgens()
 

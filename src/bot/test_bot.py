@@ -15,8 +15,8 @@ class TestEcoCordClient(EcoCordClient):
         """Initialize the TestEcoCordClient with fake users, channels, and guild."""
         super().__init__()
         self.fake_users = [FakeUser(id=i, display_name=f"User{i}") for i in range(1, 6)]
-        self.fake_channels = [{"id": i, "name": f"Channel{i}"} for i in range(1, 4)]
-        self.fake_guild = {"id": 1, "name": "TestGuild"}
+        self.fake_channels = [type("Channel", (), {"id": i, "name": f"Channel{i}"})() for i in range(1, 4)]
+        self.fake_guild = type("Guild", (), {"id": 1, "name": "TestGuild"})()
         self.fake_events_task = None
 
     async def on_ready(self) -> None:
@@ -40,11 +40,12 @@ class TestEcoCordClient(EcoCordClient):
     async def generate_fake_message(self) -> None:
         """Generate and process a fake message event."""
         user = random.choice(self.fake_users)
+        channel = random.choice(self.fake_channels)
         event = DiscordEvent(
             type="message",
             timestamp=datetime.now(UTC),
             guild=self.fake_guild,
-            channel=random.choice(self.fake_channels),
+            channel=channel,
             user=user,
             content=f"Fake message {random.randint(1, 1000)}",
         )
@@ -52,11 +53,12 @@ class TestEcoCordClient(EcoCordClient):
 
     async def generate_fake_reaction(self) -> None:
         """Generate and process a fake reaction event."""
+        channel = random.choice(self.fake_channels)
         event = DiscordEvent(
             type="reaction",
             timestamp=datetime.now(UTC),
             guild=self.fake_guild,
-            channel=random.choice(self.fake_channels),
+            channel=channel,
             user=random.choice(self.fake_users),
             content=f"👍 added on Fake message {random.randint(1, 1000)}",
         )
@@ -64,11 +66,12 @@ class TestEcoCordClient(EcoCordClient):
 
     async def generate_fake_typing(self) -> None:
         """Generate and process a fake typing event."""
+        channel = random.choice(self.fake_channels)
         event = DiscordEvent(
             type="typing",
             timestamp=datetime.now(UTC),
             guild=self.fake_guild,
-            channel=random.choice(self.fake_channels),
+            channel=channel,
             user=random.choice(self.fake_users),
             content="User is typing",
         )
