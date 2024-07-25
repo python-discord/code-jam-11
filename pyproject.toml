@@ -215,6 +215,10 @@ reportUnknownMemberType = false
 reportUnknownParameterType = false
 reportUnknownLambdaType = false
 
+executionEnvironments = [
+  { root = "src/db_tables", reportImportCycles = false },
+]
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 asyncio_mode = "auto"
