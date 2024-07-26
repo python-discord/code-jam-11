@@ -5,6 +5,7 @@ from enum import Enum
 import aiosqlite
 
 from bot.discord_event import DiscordEvent
+from bot.settings import db_path
 
 
 @dataclass
@@ -33,9 +34,10 @@ class CommandType(str, Enum):
 class EventsDatabase:
     def __init__(self, guild_name: str):
         self.db_name = guild_name + "_events.db"
+        self.db_file_path = str(db_path / self.db_name)
 
     async def execute(self, command: CommandType, query: str = None, parameters: tuple = None):
-        async with aiosqlite.connect(self.db_name) as db:
+        async with aiosqlite.connect(self.db_file_path) as db:
             cursor = await db.cursor()
             match command:
                 case CommandType.ON_LOAD:
@@ -101,7 +103,8 @@ class EventsDatabase:
 
 
 async def event_db_builder(event: DiscordEvent) -> DBEvent:
-    message_id = event.message.id if event.type == EventTypeEnum.MESSAGE else None
+    message_id = event.message.id if (event.type == EventTypeEnum.MESSAGE
+                                      or event.type == EventTypeEnum.REACTION) else None
     return DBEvent(
         event_type=event.type,
         timestamp=event.timestamp.timestamp().__round__(),
