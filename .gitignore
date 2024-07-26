@@ -31,3 +31,6 @@ build/
 .DS_Store
 
 ecosystem_gifs/
+
+# Temporary gitignore for DB testing
+src/bot/db/test

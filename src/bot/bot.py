@@ -9,6 +9,7 @@ from discord import app_commands
 from ecosystem import EcosystemManager
 
 from .discord_event import DiscordEvent, EventType
+from .models import EventsDatabase, event_db_builder
 from .settings import BOT_TOKEN, GIF_CHANNEL_ID, GUILD_ID
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
@@ -27,6 +28,8 @@ class EcoCordClient(discord.Client):
         self.test_guild = discord.Object(id=GUILD_ID)
         self.ecosystem_managers = {}
         self.ready = False
+        self.guild = None
+        self.events_database = None
 
     async def on_ready(self) -> None:
         """Event receiver for when the client is done preparing the data received from Discord.
@@ -40,6 +43,8 @@ class EcoCordClient(discord.Client):
         for guild in self.guilds:
             online_members = [member.id for member in guild.members if member.status != discord.Status.offline]
             self.ecosystem_manager.on_load_critters(online_members)
+        self.events_database = EventsDatabase(self.guild.name)
+        await self.events_database.load_table()
 
     async def on_message(self, message: discord.Message) -> None:
         """Event receiver for when a message is sent in a visible channel.
@@ -113,6 +118,8 @@ class EcoCordClient(discord.Client):
         ecosystem_manager = self.ecosystem_managers.get(event.channel.id)
         if ecosystem_manager:
             ecosystem_manager.process_event(event)
+        db_event = await event_db_builder(event)
+        await self.events_database.insert_event(db_event)
 
     async def start_ecosystems(self) -> None:
         """Initialize and start ecosystem managers for each channel and create or reuse GIF threads."""
