@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -65,47 +65,36 @@ class UserListItem(Base):
     __tablename__ = "user_list_items"
     list_id: Mapped[int] = mapped_column(ForeignKey("user_lists.id"), primary_key=True)
     tvdb_id: Mapped[int] = mapped_column(primary_key=True)
-
-    user_list: Mapped["UserList"] = relationship("UserList", back_populates="items")
     kind: Mapped[UserListItemKind] = mapped_column(nullable=False, primary_key=True)
 
-    __mapper_args__: ClassVar = {"polymorphic_on": tvdb_id, "polymorphic_identity": "base"}
+    user_list: Mapped["UserList"] = relationship("UserList", back_populates="items")
 
-
-class UserListItemSeries(UserListItem):
-    """Represents a reference to a series in a user list."""
-
-    __mapper_args__: ClassVar = {
-        "polymorphic_identity": "series",
-    }
-
-    tvdb_id: Mapped[int] = mapped_column(
-        ForeignKey("series.tvdb_id"), nullable=False, use_existing_column=True, primary_key=True
+    # 'tvdb_id' can reference Series, Movie, or Episode tables, determined by 'media_type'
+    # viewonly=True is used to prevent SQLAlchemy from managing complex relationships,
+    # as we only need them for querying
+    series: Mapped["Series"] = relationship(
+        "Series",
+        foreign_keys=[tvdb_id],
+        primaryjoin="and_(UserListItem.tvdb_id == Series.tvdb_id, UserListItem.kind == 'series')",
+        uselist=False,
+        viewonly=True,
     )
-    series: Mapped["Series"] = relationship("Series")
-
-
-class UserListItemMovie(UserListItem):
-    """Represents a reference to a movie in a user list."""
-
-    __mapper_args__: ClassVar = {
-        "polymorphic_identity": "movie",
-    }
-
-    tvdb_id: Mapped[int] = mapped_column(
-        ForeignKey("movies.tvdb_id"), nullable=False, use_existing_column=True, primary_key=True
+    movie: Mapped["Movie"] = relationship(
+        "Movie",
+        foreign_keys=[tvdb_id],
+        primaryjoin="and_(UserListItem.tvdb_id == Movie.tvdb_id, UserListItem.kind == 'movie')",
+        uselist=False,
+        viewonly=True,
     )
-    movie: Mapped["Movie"] = relationship("Movie")
-
-
-class UserListItemEpisode(UserListItem):
-    """Represents a reference to an episode in a user list."""
-
-    __mapper_args__: ClassVar = {
-        "polymorphic_identity": "episode",
-    }
-
-    tvdb_id: Mapped[int] = mapped_column(
-        ForeignKey("episodes.tvdb_id"), nullable=False, use_existing_column=True, primary_key=True
+    episode: Mapped["Episode"] = relationship(
+        "Episode",
+        foreign_keys=[tvdb_id],
+        primaryjoin="and_(UserListItem.tvdb_id == Episode.tvdb_id, UserListItem.kind == 'episode')",
+        uselist=False,
+        viewonly=True,
     )
-    episode: Mapped["Episode"] = relationship("Episode")
+
+    @property
+    def media(self) -> "Series | Movie | Episode":
+        """Return the media item associated with this user list item."""
+        return self.series or self.movie or self.episode
