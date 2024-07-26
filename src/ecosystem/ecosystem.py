@@ -20,6 +20,7 @@ from PIL import Image
 from bot.discord_event import DiscordEvent
 
 from .bird import Bird
+from .cloud_manager import CloudManager
 from .frog import Frog
 from .snake import Snake
 
@@ -98,6 +99,7 @@ class Ecosystem:
             )
             self.gif_process.start()
 
+        self.cloud_manager = CloudManager(self.width, self.height)
         atexit.register(self.cleanup)
 
     def setup_ui(self) -> None:
@@ -154,6 +156,8 @@ class Ecosystem:
 
         self._clean_up_entities()
 
+        self.cloud_manager.update(delta)
+
     def _handle_standard_spawning(self, delta: float) -> None:
         """Handle the standard spawning of entities based on activity level.
 
@@ -179,6 +183,8 @@ class Ecosystem:
         """
         sky_color = self.interpolate_color(self.sky_colors[0], self.sky_colors[1], self.activity)
         self.surface.fill(sky_color)
+
+        self.cloud_manager.draw(self.surface)
 
         ground_color = self.interpolate_color(self.ground_colors[0], self.ground_colors[1], self.activity)
         ground_height = int(self.height * 0.3)
@@ -377,7 +383,12 @@ class EcosystemManager:
     """Manages the ecosystem simulation and handles user interactions."""
 
     def __init__(
-        self, width: int = 800, height: int = 600, generate_gifs: bool = False, fps: int = 30, interactive: bool = True
+        self,
+        width: int = 1152,
+        height: int = 648,
+        generate_gifs: bool = False,
+        fps: int = 30,
+        interactive: bool = True,
     ) -> None:
         """Initialize the EcosystemManager.
 
@@ -435,17 +446,19 @@ class EcosystemManager:
 
         """
         pygame.init()
+
+        if self.interactive:
+            screen = pygame.display.set_mode((self.width, self.height))
+            pygame.display.set_caption(f"Ecosystem Visualization {multiprocessing.current_process().name}")
+        else:
+            # Create a hidden surface for rendering
+            pygame.display.set_mode((1, 1), pygame.HIDDEN)
+            screen = pygame.Surface((self.width, self.height))
+
         ecosystem = Ecosystem(
             self.width, self.height, generate_gifs=self.generate_gifs, fps=self.fps, interactive=self.interactive
         )
         ecosystem.setup_ui()
-
-        if self.interactive:
-            screen = pygame.display.set_mode((ecosystem.width, ecosystem.height))
-            pygame.display.set_caption(f"Ecosystem Visualization {multiprocessing.current_process().name}")
-        else:
-            # Create a hidden surface for rendering
-            screen = pygame.Surface((ecosystem.width, ecosystem.height))
 
         clock = pygame.time.Clock()
 
