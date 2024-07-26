@@ -3,34 +3,35 @@ import random
 import pygame
 from pygame import Color, Surface, Vector2
 
+from ecosystem.critter import Critter
 
-class Snake:
+
+class Snake(Critter):
     """Represents a snake in the ecosystem.
 
     The snake moves towards a target, grows in length, and can spawn or despawn.
     """
 
-    def __init__(self, x: int, y: int, width: int, height: int) -> None:
+    def __init__(self, member_id: int, x: int, y: int, width: int, height: int) -> None:
         """Initialize a new Snake instance.
 
         Args:
         ----
+            member_id (int): The unique identifier for the snake.
             x (int): Initial x-coordinate of the snake's head.
             y (int): Initial y-coordinate of the snake's head.
             width (int): Width of the game area.
             height (int): Height of the game area.
 
         """
-        self.width = width
-        self.height = height
+        super().__init__(member_id, x, y, width, height)
         self.segments = [Vector2(x, y)]
         self.direction = Vector2(1, 0)
         self.speed = 2
         self.length = 50
         self.color = self.generate_color()
         self.target = self.get_new_target()
-        self.alive = True
-        self.state = "spawn"
+        self.state = "inactive"
         self.scale = 0.1
 
     def generate_color(self) -> Color:
@@ -62,14 +63,18 @@ class Snake:
             activity (float): Activity level affecting the snake's speed.
 
         """
+        if self.state == "inactive":
+            return
+
         if self.state == "spawn":
             self.scale = min(1.0, self.scale + delta)
             if self.scale == 1.0:
-                self.state = "normal"
+                self.state = "active"
         elif self.state == "despawn":
             self.scale = max(0.0, self.scale - delta)
             if self.scale == 0.0:
                 self.alive = False
+                self.state = "inactive"
                 return
 
         head = self.segments[0]
@@ -111,14 +116,18 @@ class Snake:
         pygame.draw.circle(surface, (0, 0, 0), (int(left_eye.x), int(left_eye.y)), pupil_radius)
         pygame.draw.circle(surface, (0, 0, 0), (int(right_eye.x), int(right_eye.y)), pupil_radius)
 
-    def spawn(self) -> None:
-        """Spawn the snake at a random position at the bottom of the screen."""
-        self.alive = True
-        self.scale = 0.1
+    def activate(self) -> None:
         self.state = "spawn"
+        self.scale = 0.1
+
+    def deactivate(self) -> None:
+        self.state = "despawn"
+
+    def spawn(self) -> None:
+        self.alive = True
+        self.activate()
         self.segments = [Vector2(random.randint(0, self.width), self.height)]
         self.color = self.generate_color()
 
-    def start_despawn(self) -> None:
-        """Start the despawning process for the snake."""
-        self.state = "despawn"
+    def despawn(self) -> None:
+        self.deactivate()

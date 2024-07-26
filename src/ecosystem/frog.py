@@ -3,28 +3,28 @@ import random
 
 import pygame
 
+from ecosystem.critter import Critter
 
-class Frog:
+
+class Frog(Critter):
     """Represents a frog in the ecosystem simulation.
 
     This class manages the frog's appearance, movement, and lifecycle.
     """
 
-    def __init__(self, x: float, y: float, width: int, height: int) -> None:
+    def __init__(self, member_id: int, x: float, y: float, width: int, height: int) -> None:
         """Initialize a new Frog instance.
 
         Args:
         ----
+            member_id (int): Unique identifier for the frog.
             x (float): Initial x-coordinate of the frog.
             y (float): Initial y-coordinate of the frog.
             width (int): Width of the ecosystem area.
             height (int): Height of the ecosystem area.
 
         """
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+        super().__init__(member_id, x, y, width, height)
         self.size = random.uniform(20, 30)
         self.color = (random.randint(50, 100), random.randint(150, 200), random.randint(50, 100))
         self.eye_color = (255, 255, 255)
@@ -40,7 +40,14 @@ class Frog:
         self.jump_target_x = self.x
 
         self.scale = 1.0
+
+    def activate(self) -> None:
+        """Activates the frog."""
         self.alive = True
+
+    def deactivate(self) -> None:
+        """Deactivates the frog."""
+        self.alive = False
 
     def update(self, delta: float, activity: float) -> None:
         """Update the frog's state and position.
@@ -67,7 +74,7 @@ class Frog:
                 self.y = self.jump_start_y
 
         if random.random() < 0.01 * delta:
-            self.alive = False
+            self.deactivate()
 
     def start_jump(self) -> None:
         """Initiate a jump for the frog.
@@ -110,24 +117,12 @@ class Frog:
         pygame.draw.arc(surface, (50, 50, 50), mouth_rect, math.pi, 2 * math.pi, 2)
 
     def spawn(self) -> None:
-        """Spawn the frog in the ecosystem.
-
-        This method resets the frog's position and sets it as alive.
-        """
-        self.alive = True
+        """Spawn the frog in the ecosystem."""
+        self.activate()
         self.y = self.height - 20
         self.x = random.randint(0, self.width)
         self.scale = 0.1
 
     def despawn(self) -> None:
-        """Despawn the frog from the ecosystem.
-
-        This method sets the frog as not alive.
-        """
-        self.alive = False
-
-    def move(self) -> None:
-        """Move the frog.
-
-        This method is currently a placeholder and does not implement any movement.
-        """
+        """Despawn the frog from the ecosystem."""
+        self.deactivate()

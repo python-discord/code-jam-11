@@ -19,7 +19,9 @@ from PIL import Image
 
 from bot.discord_event import DiscordEvent
 
-from .critter import Critter
+from .bird import Bird
+from .frog import Frog
+from .snake import Snake
 
 
 class Ecosystem:
@@ -297,14 +299,15 @@ class Ecosystem:
 
     def spawn_critter(self) -> None:
         """Spawn a new critter in the ecosystem."""
-        new_critter = Critter(
-            member_id=random.randint(1, 1000000),  # Generate a random ID for non-user critters
+        critter_type = random.choice([Frog, Bird, Snake])
+        new_critter = critter_type(
+            member_id=random.randint(1, 1000000),
             x=random.randint(0, self.width),
-            y=self.height - 20,  # Spawn near the ground
+            y=self.height - 20,
             width=self.width,
             height=self.height,
         )
-        new_critter.spawn()  # Call the spawn method to initialize the critter
+        new_critter.spawn()
         self.critters.append(new_critter)
 
 
@@ -585,7 +588,8 @@ class EcosystemManager:
 
     def _spawn_new_critter(self, user_id: int) -> None:
         if user_id not in self.user_frogs:
-            critter = Critter(
+            critter_type = random.choice([Frog, Bird, Snake])
+            critter = critter_type(
                 user_id,
                 random.randint(0, self.ecosystem.width),
                 self.ecosystem.height - 20,
