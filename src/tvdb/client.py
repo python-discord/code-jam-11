@@ -7,23 +7,28 @@ from aiocache import BaseCache
 from yarl import URL
 
 from src.settings import TVDB_API_KEY, TVDB_RATE_LIMIT_PERIOD, TVDB_RATE_LIMIT_REQUESTS
+from src.tvdb.errors import BadCallError, InvalidApiKeyError, InvalidIdError
 from src.tvdb.generated_models import (
+    EpisodeBaseRecord,
+    EpisodeExtendedRecord,
+    EpisodesIdExtendedGetResponse,
+    EpisodesIdGetResponse,
     MovieBaseRecord,
     MovieExtendedRecord,
     MoviesIdExtendedGetResponse,
     MoviesIdGetResponse,
     SearchGetResponse,
     SearchResult,
+    SeasonBaseRecord,
     SeriesBaseRecord,
     SeriesExtendedRecord,
+    SeriesIdEpisodesSeasonTypeGetResponse,
     SeriesIdExtendedGetResponse,
     SeriesIdGetResponse,
 )
 from src.utils.iterators import get_first
 from src.utils.log import get_logger
 from src.utils.ratelimit import rate_limit
-
-from .errors import BadCallError, InvalidApiKeyError, InvalidIdError
 
 log = get_logger(__name__)
 
@@ -44,7 +49,7 @@ class FetchMeta(Enum):
 def parse_media_id(media_id: int | str) -> int:
     """Parse the media ID from a string."""
     try:
-        media_id = int(str(media_id).removeprefix("movie-").removeprefix("series-"))
+        media_id = int(str(media_id).removeprefix("movie-").removeprefix("series-").removeprefix("episode-"))
     except ValueError:
         raise InvalidIdError("Invalid media ID.")
     else:
@@ -60,8 +65,12 @@ class _Media(ABC):
     def __init__(self, client: "TvdbClient", data: AnyRecord | SearchResult | None):
         if data is None:
             raise ValueError("Data can't be None but is allowed to because of the broken pydantic generated models.")
-        self.data = data
         self.client = client
+        self.set_attributes(data)
+
+    def set_attributes(self, data: AnyRecord | SearchResult) -> None:
+        """Setting attributes."""
+        self.data = data
         self.name: str | None = self.data.name
         self.overview: str | None = None
         # if the class name is "Movie" or "Series"
@@ -206,6 +215,7 @@ class Movie(_Media):
     """Class to interact with the TVDB API for movies."""
 
     ENDPOINT: ClassVar[str] = "movies"
+    data: SearchResult | MovieBaseRecord | MovieExtendedRecord
 
     ResponseType = MoviesIdGetResponse
     ExtendedResponseType = MoviesIdExtendedGetResponse
@@ -222,15 +232,114 @@ class Series(_Media):
     """Class to interact with the TVDB API for series."""
 
     ENDPOINT: ClassVar[str] = "series"
+    data: SearchResult | SeriesBaseRecord | SeriesExtendedRecord
 
     ResponseType = SeriesIdGetResponse
     ExtendedResponseType = SeriesIdExtendedGetResponse
+
+    def __init__(self, client: "TvdbClient", data: AnyRecord | SearchResult | None):
+        super().__init__(client, data)
+
+    @override
+    def set_attributes(self, data: SearchResult | SeriesBaseRecord | SeriesExtendedRecord) -> None:
+        super().set_attributes(data)
+        self.episodes: list[Episode] | None = None
+        self.seasons: list[SeasonBaseRecord] | None = None
+        if isinstance(self.data, SeriesExtendedRecord):
+            self.seasons = self.data.seasons
 
     @override
     @classmethod
     async def supports_meta(cls, meta: FetchMeta) -> bool:
         """Check if the class supports a specific meta."""
         return meta in {FetchMeta.TRANSLATIONS, FetchMeta.EPISODES}
+
+    async def fetch_episodes(self, season_type: str = "official") -> None:
+        """Fetch episodes for the series based on the season type."""
+        cache_key: str = f"{self.id}_{season_type}"
+        endpoint = f"series/{self.id}/episodes/{season_type}"
+        response = await self.client.cache.get(cache_key, namespace="tvdb_episodes")
+        if not response:
+            response = await self.client.request("GET", endpoint)
+            await self.client.cache.set(cache_key, value=response, namespace="tvdb_episodes", ttl=60 * 60)
+            log.trace(f"Stored into cache: {cache_key}")
+        else:
+            log.trace(f"Loaded from cache: {cache_key}")
+
+        # Assuming 'episodes' field contains the list of episodes
+        response = SeriesIdEpisodesSeasonTypeGetResponse(**response)  # pyright: ignore[reportCallIssue]
+
+        if response.data and response.data.episodes:
+            self.episodes = [Episode(episode, client=self.client) for episode in response.data.episodes]
+
+    async def ensure_seasons_and_episodes(self) -> None:
+        """Ensure that reponse contains seasons."""
+        if not isinstance(self.data, SeriesExtendedRecord):
+            series = await self.fetch(
+                media_id=self.id, client=self.client, extended=True, short=True, meta=FetchMeta.EPISODES
+            )
+            self.set_attributes(series.data)
+
+
+class Episode:
+    """Represents an episode from Tvdb."""
+
+    def __init__(self, data: EpisodeBaseRecord | EpisodeExtendedRecord, client: "TvdbClient") -> None:
+        self.data = data
+        self.id: int | None = self.data.id
+        self.image: str | None = self.data.image
+        self.name: str | None = self.data.name
+        self.overview: str | None = self.data.overview
+        self.season_number: int | None = self.data.season_number
+        self.eng_name: str | None = None
+        self.eng_overview: str | None = None
+        self.series_id: int | None = self.data.series_id
+        self.client = client
+
+        if isinstance(self.data, EpisodeExtendedRecord):
+            if self.data.translations and self.data.translations.name_translations:
+                self.eng_name = get_first(
+                    translation.name
+                    for translation in self.data.translations.name_translations
+                    if translation.language == "eng"
+                )
+
+            if self.data.translations and self.data.translations.overview_translations:
+                self.eng_overview = get_first(
+                    translation.overview
+                    for translation in self.data.translations.overview_translations
+                    if translation.language == "eng"
+                )
+
+    @classmethod
+    async def fetch(cls, media_id: str | int, *, client: "TvdbClient", extended: bool = True) -> "Episode":
+        """Fetch episode."""
+        endpoint = f"/episodes/{parse_media_id(media_id)}"
+        query: dict[str, str] | None = None
+
+        if extended:
+            endpoint += "/extended"
+            query = {"meta": "translations"}
+        response = await client.request("GET", endpoint=endpoint, query=query)
+        response = EpisodesIdGetResponse(**response) if not extended else EpisodesIdExtendedGetResponse(**response)  # pyright: ignore[reportCallIssue]
+
+        if not response.data:
+            raise ValueError("No data found for Episode")
+        return cls(response.data, client=client)
+
+    async def fetch_series(
+        self, *, extended: bool = False, short: bool | None = None, meta: FetchMeta | None = None
+    ) -> Series:
+        """Fetching series."""
+        if not self.series_id:
+            raise ValueError("Series Id cannot be None.")
+        return await Series.fetch(  # pyright: ignore[reportCallIssue]
+            client=self.client,
+            media_id=self.series_id,
+            extended=extended,  # pyright: ignore[reportArgumentType]
+            short=short,
+            meta=meta,
+        )
 
 
 class TvdbClient:
