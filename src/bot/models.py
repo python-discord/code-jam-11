@@ -5,7 +5,7 @@ from enum import Enum
 import aiosqlite
 
 from bot.discord_event import DiscordEvent
-from bot.settings import db_path
+from bot.settings import test_db_path
 
 
 @dataclass
@@ -34,7 +34,7 @@ class CommandType(str, Enum):
 class EventsDatabase:
     def __init__(self, guild_name: str):
         self.db_name = guild_name + "_events.db"
-        self.db_file_path = str(db_path / self.db_name)
+        self.db_file_path = str(test_db_path / self.db_name)
 
     async def execute(self, command: CommandType, query: str = None, parameters: tuple = None):
         async with aiosqlite.connect(self.db_file_path) as db:

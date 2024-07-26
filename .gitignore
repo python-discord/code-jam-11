@@ -32,5 +32,5 @@ build/
 
 ecosystem_gifs/
 
-# Temporary git ignore for testing
-src/bot/db
+# Temporary gitignore for DB testing
+src/bot/db/test
