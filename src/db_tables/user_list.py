@@ -12,14 +12,22 @@ if TYPE_CHECKING:
     from src.db_tables.user import User
 
 
-class ItemKind(Enum):
-    """Enum to represent the kind of item in a user list."""
+class UserListKind(Enum):
+    """Enum to represent the kind of items that are stored in a user list."""
 
     SERIES = "series"
     MOVIE = "movie"
     EPISODE = "episode"
     MEDIA = "media"  # either series or movie
     ANY = "any"
+
+
+class UserListItemKind(Enum):
+    """Enum to represent the kind of item in a user list."""
+
+    SERIES = 0
+    MOVIE = 1
+    EPISODE = 2
 
 
 class UserList(Base):
@@ -35,7 +43,7 @@ class UserList(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.discord_id"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
-    item_kind: Mapped[ItemKind] = mapped_column(nullable=False)
+    item_kind: Mapped[UserListKind] = mapped_column(nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="lists")
     items: Mapped[list["UserListItem"]] = relationship("UserListItem", back_populates="user_list")
@@ -59,6 +67,7 @@ class UserListItem(Base):
     tvdb_id: Mapped[int] = mapped_column(primary_key=True)
 
     user_list: Mapped["UserList"] = relationship("UserList", back_populates="items")
+    kind: Mapped[UserListItemKind] = mapped_column(nullable=False, primary_key=True)
 
     __mapper_args__: ClassVar = {"polymorphic_on": tvdb_id, "polymorphic_identity": "base"}
 
