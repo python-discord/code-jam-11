@@ -12,6 +12,12 @@ from src.utils.log import get_logger
 # This will also set up logging with our custom configuration
 log = get_logger(__name__)
 
+# Override the logging level of the alembic migration logs
+# we set this to WARNING in the project to avoid log spam on auto-migrations
+# however when alembic is ran manually, we want to see these logs, so set it
+# back to the same level as the root log (INFO or DEBUG)
+get_logger("alembic.runtime.migration").setLevel(get_logger().getEffectiveLevel())
+
 # This is the Alembic Config object, which provides access to the values within the .ini file in use.
 config = context.config
 
