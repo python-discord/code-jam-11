@@ -22,7 +22,7 @@ get_logger("alembic.runtime.migration").setLevel(get_logger().getEffectiveLevel(
 config = context.config
 
 
-def run_migrations_offline(target_metadata: MetaData) -> None:
+def run_migrations_offline(target_metadata: MetaData, *, render_as_batch: bool) -> None:
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL and not an Engine, though an Engine is acceptable
@@ -36,20 +36,25 @@ def run_migrations_offline(target_metadata: MetaData) -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_as_batch=render_as_batch,
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
 
-async def run_migrations_online(target_metadata: MetaData) -> None:
+async def run_migrations_online(target_metadata: MetaData, *, render_as_batch: bool) -> None:
     """Run migrations in 'online' mode.
 
     In this scenario we need to create an Engine and associate a connection with the context.
     """
 
     def do_run_migrations(connection: Connection) -> None:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=render_as_batch,
+        )
 
         with context.begin_transaction():
             context.run_migrations()
@@ -78,12 +83,16 @@ def main() -> None:
     config.set_main_option("sqlalchemy.url", SQLALCHEMY_URL)
     load_db_models()
 
+    # Check if we're using SQLite database, as it requires special handling for migrations
+    # due to the lack of ALTER TABLE statements. (https://alembic.sqlalchemy.org/en/latest/batch.html)
+    render_as_batch = SQLALCHEMY_URL.startswith("sqlite")
+
     target_metadata = Base.metadata
 
     if context.is_offline_mode():
-        run_migrations_offline(target_metadata)
+        run_migrations_offline(target_metadata, render_as_batch=render_as_batch)
     else:
-        asyncio.run(run_migrations_online(target_metadata))
+        asyncio.run(run_migrations_online(target_metadata, render_as_batch=render_as_batch))
 
 
 main()
