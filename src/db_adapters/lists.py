@@ -67,6 +67,25 @@ async def list_remove_item_safe(
         await list_remove_item(session, user_list, item)
 
 
+@overload
+async def list_put_item_safe(
+    session: AsyncSession,
+    user_list: UserList,
+    tvdb_id: int,
+    kind: Literal[UserListItemKind.MOVIE, UserListItemKind.SERIES],
+) -> UserListItem: ...
+
+
+@overload
+async def list_put_item_safe(
+    session: AsyncSession,
+    user_list: UserList,
+    tvdb_id: int,
+    kind: Literal[UserListItemKind.EPISODE],
+    series_id: int,
+) -> UserListItem: ...
+
+
 async def list_put_item_safe(
     session: AsyncSession, user_list: UserList, tvdb_id: int, kind: UserListItemKind, series_id: int | None = None
 ) -> UserListItem:
