@@ -7,7 +7,7 @@ import discord
 from discord import app_commands, ui
 
 from ecosystem import EcosystemManager
-from storage.models import EventsDatabase, event_db_builder
+from storage.models import Database, GuildConfig, event_db_builder
 
 from .discord_event import DiscordEvent, EventType
 from .settings import BOT_TOKEN
@@ -27,12 +27,11 @@ class EcoCordClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
         self.guilds_data = {}
         self.ready = False
+        self.database = Database("ecocord")
 
     async def on_ready(self) -> None:
-        """Event receiver for when the client is done preparing the data received from Discord.
-
-        Sets the client as ready and prints a login confirmation message.
-        """
+        """Event receiver for when the client is done preparing the data received from Discord."""
+        await self.database.initialize()
         self.ready = True
         print(f"Logged in as {self.user} (ID: {self.user.id})")
         for guild in self.guilds:
@@ -42,10 +41,14 @@ class EcoCordClient(discord.Client):
         if guild.id not in self.guilds_data:
             self.guilds_data[guild.id] = {
                 "ecosystem_managers": {},
-                "events_database": EventsDatabase(guild.name),
-                "gif_channel_id": None,  # Initialize with None
             }
-            await self.guilds_data[guild.id]["events_database"].load_table()
+            config = await self.database.get_guild_config(guild.id)
+            if config:
+                self.guilds_data[guild.id]["gif_channel_id"] = config.gif_channel
+                for channel_id in config.allowed_channels:
+                    self.guilds_data[guild.id]["ecosystem_managers"][channel_id] = EcosystemManager(
+                        generate_gifs=True, interactive=False
+                    )
 
         online_members = [member.id for member in guild.members if member.status != discord.Status.offline]
         for ecosystem_manager in self.guilds_data[guild.id]["ecosystem_managers"].values():
@@ -126,7 +129,7 @@ class EcoCordClient(discord.Client):
             if ecosystem_manager:
                 ecosystem_manager.process_event(event)
             db_event = await event_db_builder(event)
-            await guild_data["events_database"].insert_event(db_event)
+            await self.database.insert_event(db_event)
 
     async def start_ecosystems(self, guild_id: int, channels: list[discord.TextChannel] | None = None) -> None:
         """Initialize and start ecosystem managers for specified channels."""
@@ -186,6 +189,12 @@ class EcoCordClient(discord.Client):
 
         await self.stop_ecosystems(guild_id, list(channels_to_stop))
         await self.start_ecosystems(guild_id, [channel for channel in new_channels if channel.id in channels_to_start])
+
+        # Update the guild configuration in the database
+        config = GuildConfig(
+            guild_id=guild_id, allowed_channels=list(new_channel_ids), gif_channel=guild_data["gif_channel_id"]
+        )
+        await self.database.set_guild_config(config)
 
     async def send_gifs(self, guild_id: int, channel_id: int, thread_id: int) -> None:
         """Continuously sends GIFs of the ecosystem to a designated thread."""
@@ -337,7 +346,7 @@ class ConfigureModal(ui.Modal, title="Configure EcoCord Bot"):
     )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        channels = [channel.name for channel in self.channel_select.to_numpy()]
+        channels = self.channel_select.to_numpy()
         gif_channel = self.gif_channel.to_numpy()[0]
 
         client = interaction.client
@@ -345,10 +354,18 @@ class ConfigureModal(ui.Modal, title="Configure EcoCord Bot"):
         if guild_data:
             guild_data["gif_channel_id"] = gif_channel.id
 
+        # Update the guild configuration in the database
+        config = GuildConfig(
+            guild_id=interaction.guild_id,
+            allowed_channels=[channel.id for channel in channels],
+            gif_channel=gif_channel.id,
+        )
+        await client.database.set_guild_config(config)
+
         await interaction.response.send_message(
-            f"Bot configured to run in channels: {', '.join(channels)}\n"
+            f"Bot configured to run in channels: {', '.join(channel.name for channel in channels)}\n"
             f"GIF threads will be created in: #{gif_channel.name}",
             ephemeral=True,
         )
 
-        await client.reconfigure_channels(interaction.guild_id, self.channel_select.to_numpy())
+        await client.reconfigure_channels(interaction.guild_id, channels)
