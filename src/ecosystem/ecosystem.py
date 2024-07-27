@@ -493,6 +493,8 @@ class EcosystemManager:
                     self.running = False
                 elif command == "process_event":
                     self._process_event(ecosystem, args)
+                elif command == "set_online_critters":
+                    self._set_online_critters(ecosystem, args)
 
         pygame.quit()
         ecosystem.cleanup()
@@ -587,31 +589,49 @@ class EcosystemManager:
 
         """
         if user_id not in self.user_frogs:
-            self._spawn_new_frog(ecosystem, user_id)
+            self._spawn_new_critter(ecosystem, user_id)
         elif is_typing:
             self.user_frogs[user_id].move()
 
         self.last_activity[user_id] = current_time
-        self._remove_inactive_users(current_time)
+        self._remove_inactive_users(ecosystem, current_time)
 
-    def on_load_critters(self, online_members: list[int]) -> None:
-        for member in online_members:
-            self._spawn_new_critter(member)
-            print(f"{member}'s critter spawned")
+    def set_online_critters(self, online_members: list[int]) -> None:
+        """Set the online critters based on the list of online members.
 
-    def _spawn_new_critter(self, user_id: int) -> None:
+        Args:
+        ----
+            online_members (list[int]): List of online member IDs.
+
+        """
+        self.command_queue.put(("set_online_critters", online_members))
+
+    def _set_online_critters(self, ecosystem: Ecosystem, online_members: list[int]) -> None:
+        """Set the online critters within the ecosystem process.
+
+        Args:
+        ----
+            ecosystem (Ecosystem): The ecosystem instance.
+            online_members (list[int]): List of online member IDs.
+
+        """
+        for member_id in online_members:
+            self._spawn_new_critter(ecosystem, member_id)
+            print(f"{member_id}'s critter spawned")
+
+    def _spawn_new_critter(self, ecosystem: Ecosystem, user_id: int) -> None:
         if user_id not in self.user_frogs:
             critter_type = random.choice([Frog, Bird, Snake])
             critter = critter_type(
                 user_id,
-                random.randint(0, self.ecosystem.width),
-                self.ecosystem.height - 20,
-                self.ecosystem.width,
-                self.ecosystem.height,
+                random.randint(0, ecosystem.width),
+                ecosystem.height - 20,
+                ecosystem.width,
+                ecosystem.height,
             )
             critter.spawn()
             self.user_frogs[user_id] = critter
-            self.ecosystem.critters.append(critter)
+            ecosystem.critters.append(critter)
 
     def _remove_inactive_users(self, ecosystem: Ecosystem, current_time: float) -> None:
         """Remove inactive users from the ecosystem.
@@ -627,12 +647,12 @@ class EcosystemManager:
             user_id for user_id, last_time in self.last_activity.items() if current_time - last_time > one_minute
         ]
         for user_id in inactive_users:
-            self._remove_user(ecosystem, user_id)
+            self._remove_critter(ecosystem, user_id)
 
-    def _remove_critter(self, user_id: int) -> None:
+    def _remove_critter(self, ecosystem: Ecosystem, user_id: int) -> None:
         if user_id in self.user_frogs:
-            frog = self.user_frogs.pop(user_id)
-            self.ecosystem.critters.remove(frog)
+            critter = self.user_frogs.pop(user_id)
+            ecosystem.critters.remove(critter)
         self.last_activity.pop(user_id, None)
 
     def get_latest_gif(self) -> tuple[bytes, float] | None:

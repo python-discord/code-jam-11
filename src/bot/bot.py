@@ -4,7 +4,7 @@ import logging
 from collections import deque
 
 import discord
-from discord import app_commands, ui
+from discord import app_commands
 
 from ecosystem import EcosystemManager
 from storage.models import Database, GuildConfig, event_db_builder
@@ -25,6 +25,7 @@ class EcoCordClient(discord.Client):
         intents = discord.Intents.all()
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
+        self.tree.add_command(configure)
         self.guilds_data = {}
         self.ready = False
         self.database = Database("ecocord")
@@ -34,10 +35,30 @@ class EcoCordClient(discord.Client):
         await self.database.initialize()
         self.ready = True
         print(f"Logged in as {self.user} (ID: {self.user.id})")
+
+        for guild in self.guilds:
+            await self.tree.sync(guild=guild)
+            print(f"Synced commands for guild: {guild.name}")
+
         for guild in self.guilds:
             await self.initialize_guild(guild)
 
     async def initialize_guild(self, guild: discord.Guild) -> None:
+        """Initialize the guild data and ecosystem managers for a given Discord guild.
+
+        This method sets up the necessary data structures for the guild, retrieves the guild configuration
+        from the database, and initializes ecosystem managers for the configured channels. It also loads
+        critters for online members in each ecosystem manager.
+
+        Args:
+        ----
+            guild (discord.Guild): The Discord guild to initialize.
+
+        Returns:
+        -------
+            None
+
+        """
         if guild.id not in self.guilds_data:
             self.guilds_data[guild.id] = {
                 "ecosystem_managers": {},
@@ -45,14 +66,26 @@ class EcoCordClient(discord.Client):
             config = await self.database.get_guild_config(guild.id)
             if config:
                 self.guilds_data[guild.id]["gif_channel_id"] = config.gif_channel
-                for channel_id in config.allowed_channels:
-                    self.guilds_data[guild.id]["ecosystem_managers"][channel_id] = EcosystemManager(
-                        generate_gifs=True, interactive=False
-                    )
+                # Call reconfigure_channels here with the channels from the config
+                channels = [guild.get_channel(channel_id) for channel_id in config.allowed_channels]
+                await self.reconfigure_channels(guild.id, channels)
 
+        print("here")
         online_members = [member.id for member in guild.members if member.status != discord.Status.offline]
         for ecosystem_manager in self.guilds_data[guild.id]["ecosystem_managers"].values():
-            ecosystem_manager.on_load_critters(online_members)
+            ecosystem_manager.set_online_critters(online_members)
+
+        print("there")
+        # Start the task to update online critters
+        self.loop.create_task(self.update_online_critters(guild))
+
+    async def update_online_critters(self, guild: discord.Guild) -> None:
+        """Periodically update online critters for all ecosystem managers in the guild."""
+        while True:
+            online_members = [member.id for member in guild.members if member.status != discord.Status.offline]
+            for ecosystem_manager in self.guilds_data[guild.id]["ecosystem_managers"].values():
+                ecosystem_manager.set_online_critters(online_members)
+            await asyncio.sleep(5)
 
     async def on_message(self, message: discord.Message) -> None:
         """Event receiver for when a message is sent in a visible channel.
@@ -64,6 +97,13 @@ class EcoCordClient(discord.Client):
             message (discord.Message): The message that was sent.
 
         """
+        # Check if the message is a direct message
+        is_direct_message = isinstance(message.channel, discord.DMChannel)
+
+        # If it's a direct message, we'll handle it differently
+        if is_direct_message:
+            return
+
         event = DiscordEvent.from_discord_objects(
             type=EventType.MESSAGE,
             timestamp=message.created_at,
@@ -317,55 +357,141 @@ class EcoCordClient(discord.Client):
             del self.guilds_data[guild.id]
         logging.info("Removed from guild %s (ID: %s)", guild.name, guild.id)
 
-    @app_commands.command()
-    @app_commands.default_permissions(administrator=True)
-    async def configure(self, interaction: discord.Interaction) -> None:
-        """Configure the bot (Admin only)."""
-        if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
-            return
 
-        modal = ConfigureModal()
-        await interaction.response.send_modal(modal)
+class ConfigureView(discord.ui.View):
+    """View for configuring EcoCord."""
 
+    def __init__(self, client: discord.Client, guild_id: int, visible_channels: list[discord.TextChannel]) -> None:
+        """Initialize the ConfigureView.
 
-class ConfigureModal(ui.Modal, title="Configure EcoCord Bot"):
-    """Modal for configuring the EcoCord Bot."""
+        Args:
+        ----
+            client: The Discord client.
+            guild_id: The ID of the guild being configured.
+            visible_channels: List of visible text channels in the guild.
 
-    channel_select = ui.ChannelSelect(
-        placeholder="Select channels for ecosystem simulation",
-        min_values=1,
-        max_values=10,
-        channel_types=[discord.ChannelType.text],
-    )
-    gif_channel = ui.ChannelSelect(
-        placeholder="Select channel for GIF threads",
-        min_values=1,
-        max_values=1,
-        channel_types=[discord.ChannelType.text],
-    )
+        """
+        super().__init__()
+        self.client = client
+        self.guild_id = guild_id
+        self.visible_channels = visible_channels
+
+        # Get existing configuration
+        guild_data = self.client.guilds_data.get(self.guild_id, {})
+        self.managed_channels = [
+            channel for channel in visible_channels if channel.id in guild_data.get("ecosystem_managers", {})
+        ]
+        self.gif_channel = next(
+            (channel for channel in visible_channels if channel.id == guild_data.get("gif_channel_id")), None
+        )
+
+        # Add managed channels select
+        self.add_item(
+            discord.ui.ChannelSelect(
+                custom_id="managed_channels",
+                placeholder="Select managed channels",
+                min_values=1,
+                max_values=len(visible_channels),
+                channel_types=[discord.ChannelType.text],
+                default_values=self.managed_channels,
+            )
+        )
+
+        # Add GIF channel select
+        self.add_item(
+            discord.ui.ChannelSelect(
+                custom_id="gif_channel",
+                placeholder="Select GIF channel",
+                min_values=1,
+                max_values=1,
+                channel_types=[discord.ChannelType.text],
+                default_values=[self.gif_channel] if self.gif_channel else None,
+            )
+        )
+
+    @discord.ui.button(label="Submit", style=discord.ButtonStyle.primary)
+    async def submit(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await self.on_submit(interaction)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        channels = self.channel_select.to_numpy()
-        gif_channel = self.gif_channel.to_numpy()[0]
-
         client = interaction.client
-        guild_data = client.guilds_data.get(interaction.guild_id)
+        guild_data = client.guilds_data.get(interaction.guild.id)
+
+        if not self.managed_channels or not self.gif_channel:
+            await interaction.response.send_message(
+                "Please select both managed channels and a GIF channel before submitting.", ephemeral=True
+            )
+            return
+
         if guild_data:
-            guild_data["gif_channel_id"] = gif_channel.id
+            guild_data["gif_channel_id"] = self.gif_channel.id
 
         # Update the guild configuration in the database
         config = GuildConfig(
-            guild_id=interaction.guild_id,
-            allowed_channels=[channel.id for channel in channels],
-            gif_channel=gif_channel.id,
+            guild_id=interaction.guild.id,
+            allowed_channels=[channel.id for channel in self.managed_channels],
+            gif_channel=self.gif_channel.id,
         )
-        await client.database.set_guild_config(config)
+        try:
+            await client.database.set_guild_config(config)
+        except Exception:
+            logging.exception("Failed to update database")
+            await interaction.followup.send(
+                "An error occurred while saving the configuration. Please try again.", ephemeral=True
+            )
+            return
 
-        await interaction.response.send_message(
-            f"Bot configured to run in channels: {', '.join(channel.name for channel in channels)}\n"
-            f"GIF threads will be created in: #{gif_channel.name}",
-            ephemeral=True,
+        confirmation_message = (
+            "Configuration complete!\n\n"
+            f"Bot configured to run in channels: {', '.join(channel.name for channel in self.managed_channels)}\n"
+            f"GIF threads will be created in: #{self.gif_channel.name}"
         )
 
-        await client.reconfigure_channels(interaction.guild_id, channels)
+        try:
+            message = await interaction.original_response()
+            await message.edit(content=confirmation_message, view=None)
+        except discord.NotFound:
+            # If the original message was deleted, send a new message
+            await interaction.followup.send(content=confirmation_message, ephemeral=True)
+
+        try:
+            await client.reconfigure_channels(interaction.guild.id, self.managed_channels)
+        except Exception:
+            logging.exception("Failed to reconfigure channels")
+            await interaction.followup.send(
+                "Configuration saved, but there was an error applying the changes. "
+                "Please try again or contact support.",
+                ephemeral=True,
+            )
+
+        self.stop()
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.data["component_type"] == discord.ComponentType.channel_select.value:
+            if interaction.data["custom_id"] == "managed_channels":
+                self.managed_channels = [
+                    interaction.guild.get_channel(int(channel_id)) for channel_id in interaction.data["values"]
+                ]
+            elif interaction.data["custom_id"] == "gif_channel":
+                self.gif_channel = interaction.guild.get_channel(int(interaction.data["values"][0]))
+
+        # Acknowledge the interaction
+        await interaction.response.defer()
+        return True
+
+
+@app_commands.command(name="configure", description="Configure EcoCord")
+@app_commands.default_permissions(administrator=True)
+async def configure(interaction: discord.Interaction) -> None:
+    """Configure EcoCord settings for the guild."""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+        return
+
+    visible_channels = [
+        channel
+        for channel in interaction.guild.text_channels
+        if channel.permissions_for(interaction.guild.me).send_messages
+    ]
+    view = ConfigureView(interaction.client, interaction.guild.id, visible_channels)
+    await interaction.response.send_message("Please configure the bot:", view=view, ephemeral=True)

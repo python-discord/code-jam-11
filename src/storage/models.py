@@ -1,3 +1,4 @@
+import logging
 import uuid
 from dataclasses import dataclass
 from enum import Enum
@@ -58,32 +59,37 @@ class Database:
 
         """
         self.db_file_path = f"{db_name}.sqlite3"
+        self.logger = logging.getLogger(__name__)
 
     async def initialize(self) -> None:
         """Initialize the database and create tables if they don't exist."""
-        if not Path(self.db_file_path).exists():
-            async with aiosqlite.connect(self.db_file_path) as db:
-                await db.execute("""
-                    CREATE TABLE IF NOT EXISTS events (
-                        id TEXT NOT NULL PRIMARY KEY,
-                        guild_id INT NOT NULL,
-                        event_type TEXT NOT NULL,
-                        timestamp INT NOT NULL,
-                        channel_id INT NOT NULL,
-                        member_id INT NOT NULL,
-                        message_id TEXT,
-                        content TEXT
-                    )
-                """)
-                await db.execute("""
-                    CREATE TABLE IF NOT EXISTS guild_config (
-                        guild_id INTEGER PRIMARY KEY,
-                        allowed_channels TEXT NOT NULL,
-                        gif_channel INTEGER
-                    )
-                """)
-                await db.commit()
-        print("Database initialized successfully.")
+        try:
+            if not Path(self.db_file_path).exists():
+                async with aiosqlite.connect(self.db_file_path) as db:
+                    await db.execute("""
+                        CREATE TABLE IF NOT EXISTS events (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            guild_id INT NOT NULL,
+                            event_type TEXT NOT NULL,
+                            timestamp INT NOT NULL,
+                            channel_id INT NOT NULL,
+                            member_id INT NOT NULL,
+                            message_id TEXT,
+                            content TEXT
+                        )
+                    """)
+                    await db.execute("""
+                        CREATE TABLE IF NOT EXISTS guild_config (
+                            guild_id INTEGER PRIMARY KEY,
+                            allowed_channels TEXT NOT NULL,
+                            gif_channel INTEGER
+                        )
+                    """)
+                    await db.commit()
+            self.logger.info("Database initialized successfully.")
+        except aiosqlite.Error:
+            self.logger.exception("Failed to initialize database")
+            raise
 
     async def execute(self, command: CommandType, query: str | None = None, parameters: tuple | None = None) -> None:
         """Execute a database command.
@@ -94,29 +100,28 @@ class Database:
             query (Optional[str], optional): The SQL query. Defaults to None.
             parameters (Optional[tuple], optional): Query parameters. Defaults to None.
 
+        Raises:
+        ------
+            aiosqlite.Error: If there's an error executing the database command.
+
         """
-        async with aiosqlite.connect(self.db_file_path) as db:
-            cursor = await db.cursor()
-            match command:
-                case CommandType.ON_LOAD:
-                    try:
+        try:
+            async with aiosqlite.connect(self.db_file_path) as db:
+                db: aiosqlite.Connection
+                cursor = await db.cursor()
+                match command:
+                    case CommandType.ON_LOAD:
                         await cursor.execute(query)
                         await db.commit()
-                    except aiosqlite.DatabaseError as e:
-                        print(f"DB ONLOAD ERROR: {e}")
-                    print("database loaded successfully.")
-                case CommandType.INSERT:
-                    try:
+                        self.logger.info("Database loaded successfully.")
+                    case CommandType.INSERT:
                         await cursor.execute(query, parameters)
                         await db.commit()
-                    except aiosqlite.DatabaseError as e:
-                        print(f"DB INSERT ERROR: {e}")
-                    print("database insert successfully.")
-                case CommandType.GET:
-                    try:
-                        await db.execute_fetchall(query, parameters)
-                    except aiosqlite.DatabaseError as e:
-                        print(f"DB READ ERROR: {e}")
+                    case CommandType.GET:
+                        return await db.execute_fetchall(query, parameters)
+        except aiosqlite.Error:
+            self.logger.exception("Database error (%s)", command.value)
+            raise
 
     async def insert_event(self, event: DBEvent) -> None:
         query = """
@@ -154,8 +159,10 @@ class Database:
         FROM events
         WHERE guild_id = ? AND timestamp BETWEEN ? AND ?
         """
-        async with aiosqlite.connect(self.db_file_path) as db:
-            cursor = await db.execute(query, (guild_id, start_time, stop_time))
+        async with (
+            aiosqlite.connect(self.db_file_path) as db,
+            db.execute(query, (guild_id, start_time, stop_time)) as cursor,
+        ):
             rows = await cursor.fetchall()
             return [DBEvent(*row) for row in rows]
 
@@ -176,8 +183,7 @@ class Database:
         FROM guild_config
         WHERE guild_id = ?
         """
-        async with aiosqlite.connect(self.db_file_path) as db:
-            cursor = await db.execute(query, (guild_id,))
+        async with aiosqlite.connect(self.db_file_path) as db, db.execute(query, (guild_id,)) as cursor:
             row = await cursor.fetchone()
             if row:
                 guild_id, allowed_channels_str, gif_channel = row
@@ -200,11 +206,11 @@ async def event_db_builder(event: DiscordEvent) -> DBEvent:
     """
     message_id = event.message.id if event.type in {EventTypeEnum.MESSAGE, EventTypeEnum.REACTION} else None
     return DBEvent(
-        event_type=event.type,
+        event_type=event.type.value,
         timestamp=event.timestamp.timestamp().__round__(),
         guild_id=event.guild.id,
         channel_id=event.channel.id,
-        member_id=event.user.id,
+        member_id=event.member.id,
         message_id=message_id,
         content=event.content,
     )

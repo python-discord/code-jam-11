@@ -127,11 +127,14 @@ class DiscordEvent:
         member: Optional["discord.Member"],
         content: str,
     ) -> "DiscordEvent":
+        print(channel)
         return cls(
             type=type,
             timestamp=timestamp,
             guild=SerializableGuild(guild.id, guild.name, guild.verification_level.value) if guild else None,
-            channel=SerializableTextChannel(channel.id, channel.name) if channel else None,
+            channel=SerializableTextChannel(channel.id, channel.name)
+            if channel and hasattr(channel, "id") and hasattr(channel, "name")
+            else None,
             member=SerializableMember(member.id, member.name, member.display_name, [role.id for role in member.roles])
             if member
             else None,
