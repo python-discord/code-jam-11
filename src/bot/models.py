@@ -10,6 +10,8 @@ from bot.settings import test_db_path
 
 @dataclass
 class DBEvent:
+    """Represents a database event."""
+
     event_type: str
     timestamp: int
     guild_id: int
@@ -20,23 +22,45 @@ class DBEvent:
 
 
 class EventTypeEnum(str, Enum):
+    """Enum for event types."""
+
     MESSAGE = "message"
     TYPING = "typing"
     REACTION = "reaction"
 
 
 class CommandType(str, Enum):
+    """Enum for command types."""
+
     ON_LOAD = "on_load"
     GET = "get"
     INSERT = "insert"
 
 
 class EventsDatabase:
-    def __init__(self, guild_name: str):
+    """Handles database operations for events."""
+
+    def __init__(self, guild_name: str) -> None:
+        """Initialize the EventsDatabase.
+
+        Args:
+        ----
+            guild_name (str): The name of the guild.
+
+        """
         self.db_name = guild_name + "_events.db"
         self.db_file_path = str(test_db_path / self.db_name)
 
-    async def execute(self, command: CommandType, query: str = None, parameters: tuple = None):
+    async def execute(self, command: CommandType, query: str | None = None, parameters: tuple | None = None) -> None:
+        """Execute a database command.
+
+        Args:
+        ----
+            command (CommandType): The type of command to execute.
+            query (Optional[str], optional): The SQL query. Defaults to None.
+            parameters (Optional[tuple], optional): Query parameters. Defaults to None.
+
+        """
         async with aiosqlite.connect(self.db_file_path) as db:
             cursor = await db.cursor()
             match command:
@@ -88,11 +112,19 @@ class EventsDatabase:
             event.channel_id,
             event.member_id,
             event.message_id,
-            event.content
+            event.content,
         )
         await self.execute(command=CommandType.INSERT, query=query, parameters=data)
 
-    async def get_events(self, start_time: int, stop_time: int):
+    async def get_events(self, start_time: int, stop_time: int) -> None:
+        """Retrieve events within a specified time range.
+
+        Args:
+        ----
+            start_time (int): The start timestamp.
+            stop_time (int): The end timestamp.
+
+        """
         query = """
         SELECT event_type, timestamp, guild_id, channel_id, member_id, message_id, content
         FROM events
@@ -103,8 +135,18 @@ class EventsDatabase:
 
 
 async def event_db_builder(event: DiscordEvent) -> DBEvent:
-    message_id = event.message.id if (event.type == EventTypeEnum.MESSAGE
-                                      or event.type == EventTypeEnum.REACTION) else None
+    """Build a DBEvent from a DiscordEvent.
+
+    Args:
+    ----
+        event (DiscordEvent): The Discord event to convert.
+
+    Returns:
+    -------
+        DBEvent: The converted database event.
+
+    """
+    message_id = event.message.id if event.type in {EventTypeEnum.MESSAGE, EventTypeEnum.REACTION} else None
     return DBEvent(
         event_type=event.type,
         timestamp=event.timestamp.timestamp().__round__(),
@@ -112,5 +154,5 @@ async def event_db_builder(event: DiscordEvent) -> DBEvent:
         channel_id=event.channel.id,
         member_id=event.user.id,
         message_id=message_id,
-        content=event.content
+        content=event.content,
     )
