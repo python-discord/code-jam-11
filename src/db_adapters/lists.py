@@ -28,8 +28,15 @@ async def list_put_item(
 async def list_put_item(
     session: AsyncSession, user_list: UserList, tvdb_id: int, kind: UserListItemKind, series_id: int | None = None
 ) -> UserListItem:
-    """Add an item to a user list, raises an error if the item is already present."""
+    """Add an item to a user list.
+
+    :raises ValueError: If the item is already present in the list.
+    """
     await ensure_media(session, tvdb_id, kind, series_id=series_id)
+
+    if await session.get(UserListItem, (user_list.id, tvdb_id, kind)) is not None:
+        raise ValueError(f"Item {tvdb_id} is already in list {user_list.id}.")
+
     item = UserListItem(list_id=user_list.id, tvdb_id=tvdb_id, kind=kind)
     session.add(item)
     await session.commit()
