@@ -4,13 +4,13 @@ import logging
 from collections import deque
 
 import discord
-from discord import app_commands
+from discord import app_commands, ui
 
 from ecosystem import EcosystemManager
 
 from .discord_event import DiscordEvent, EventType
 from .models import EventsDatabase, event_db_builder
-from .settings import BOT_TOKEN, GIF_CHANNEL_ID, GUILD_ID
+from .settings import BOT_TOKEN
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
 
@@ -25,11 +25,8 @@ class EcoCordClient(discord.Client):
         intents = discord.Intents.all()
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
-        self.test_guild = discord.Object(id=GUILD_ID)
-        self.ecosystem_managers = {}
+        self.guilds_data = {}
         self.ready = False
-        self.guild = None
-        self.events_database = None
 
     async def on_ready(self) -> None:
         """Event receiver for when the client is done preparing the data received from Discord.
@@ -38,13 +35,21 @@ class EcoCordClient(discord.Client):
         """
         self.ready = True
         print(f"Logged in as {self.user} (ID: {self.user.id})")
-        print("------")
-        await self.start_ecosystems()
         for guild in self.guilds:
-            online_members = [member.id for member in guild.members if member.status != discord.Status.offline]
-            self.ecosystem_manager.on_load_critters(online_members)
-        self.events_database = EventsDatabase(self.guild.name)
-        await self.events_database.load_table()
+            await self.initialize_guild(guild)
+
+    async def initialize_guild(self, guild: discord.Guild) -> None:
+        if guild.id not in self.guilds_data:
+            self.guilds_data[guild.id] = {
+                "ecosystem_managers": {},
+                "events_database": EventsDatabase(guild.name),
+                "gif_channel_id": None,  # Initialize with None
+            }
+            await self.guilds_data[guild.id]["events_database"].load_table()
+
+        online_members = [member.id for member in guild.members if member.status != discord.Status.offline]
+        for ecosystem_manager in self.guilds_data[guild.id]["ecosystem_managers"].values():
+            ecosystem_manager.on_load_critters(online_members)
 
     async def on_message(self, message: discord.Message) -> None:
         """Event receiver for when a message is sent in a visible channel.
@@ -115,24 +120,30 @@ class EcoCordClient(discord.Client):
             f"Event: {event.type.name} - {event.member.display_name} in {event.channel}: "
             f"{event.content} @ {event.timestamp}"
         )
-        ecosystem_manager = self.ecosystem_managers.get(event.channel.id)
-        if ecosystem_manager:
-            ecosystem_manager.process_event(event)
-        db_event = await event_db_builder(event)
-        await self.events_database.insert_event(db_event)
+        guild_data = self.guilds_data.get(event.guild.id)
+        if guild_data:
+            ecosystem_manager = guild_data["ecosystem_managers"].get(event.channel.id)
+            if ecosystem_manager:
+                ecosystem_manager.process_event(event)
+            db_event = await event_db_builder(event)
+            await guild_data["events_database"].insert_event(db_event)
 
-    async def start_ecosystems(self) -> None:
-        """Initialize and start ecosystem managers for each channel and create or reuse GIF threads."""
-        gif_channel = await self.fetch_channel(GIF_CHANNEL_ID)
+    async def start_ecosystems(self, guild_id: int, channels: list[discord.TextChannel] | None = None) -> None:
+        """Initialize and start ecosystem managers for specified channels."""
+        guild_data = self.guilds_data.get(guild_id)
+        if not guild_data or guild_data["gif_channel_id"] is None:
+            return
 
+        gif_channel = await self.fetch_channel(guild_data["gif_channel_id"])
         existing_threads = {thread.name: thread for thread in gif_channel.threads}
 
         gif_tasks = []
-        for channel in self.get_all_channels():
-            if isinstance(channel, discord.TextChannel):
+
+        for channel in channels:
+            if channel.id not in guild_data["ecosystem_managers"]:
                 ecosystem_manager = EcosystemManager(generate_gifs=True, interactive=False)
                 ecosystem_manager.start(show_controls=False)
-                self.ecosystem_managers[channel.id] = ecosystem_manager
+                guild_data["ecosystem_managers"][channel.id] = ecosystem_manager
 
                 thread_name = f"Ecosystem-{channel.name}"
                 if thread_name in existing_threads:
@@ -142,21 +153,47 @@ class EcoCordClient(discord.Client):
                     thread = await gif_channel.create_thread(name=thread_name, type=discord.ChannelType.public_thread)
                     print(f"Created new thread for {channel.name}")
 
-                gif_tasks.append(self.send_gifs(channel.id, thread.id))
+                gif_tasks.append(self.send_gifs(guild_id, channel.id, thread.id))
 
-        # Start all gif sending tasks in parallel
+        # Start all new gif sending tasks in parallel
         await asyncio.gather(*gif_tasks)
 
-    async def stop_ecosystems(self) -> None:
-        """Stop all ecosystem managers."""
-        for ecosystem_manager in self.ecosystem_managers.values():
-            ecosystem_manager.stop()
+    async def stop_ecosystems(self, guild_id: int, channel_ids: list[int] | None = None) -> None:
+        """Stop specified ecosystem managers or all if not specified."""
+        guild_data = self.guilds_data.get(guild_id)
+        if not guild_data:
+            return
 
-        self.ecosystem_managers.clear()
+        if channel_ids is None:
+            channel_ids = list(guild_data["ecosystem_managers"].keys())
 
-    async def send_gifs(self, channel_id: int, thread_id: int) -> None:
+        for channel_id in channel_ids:
+            ecosystem_manager = guild_data["ecosystem_managers"].pop(channel_id, None)
+            if ecosystem_manager:
+                ecosystem_manager.stop()
+
+    async def reconfigure_channels(self, guild_id: int, new_channels: list[discord.TextChannel]) -> None:
+        """Reconfigure the bot to run in the specified channels."""
+        guild_data = self.guilds_data.get(guild_id)
+        if not guild_data:
+            return
+
+        new_channel_ids = {channel.id for channel in new_channels}
+        current_channel_ids = set(guild_data["ecosystem_managers"].keys())
+
+        channels_to_stop = current_channel_ids - new_channel_ids
+        channels_to_start = new_channel_ids - current_channel_ids
+
+        await self.stop_ecosystems(guild_id, list(channels_to_stop))
+        await self.start_ecosystems(guild_id, [channel for channel in new_channels if channel.id in channels_to_start])
+
+    async def send_gifs(self, guild_id: int, channel_id: int, thread_id: int) -> None:
         """Continuously sends GIFs of the ecosystem to a designated thread."""
-        ecosystem_manager = self.ecosystem_managers.get(channel_id)
+        guild_data = self.guilds_data.get(guild_id)
+        if not guild_data:
+            return
+
+        ecosystem_manager = guild_data["ecosystem_managers"].get(channel_id)
         if not ecosystem_manager:
             return
 
@@ -220,3 +257,98 @@ class EcoCordClient(discord.Client):
         """Start the bot and connects to Discord."""
         print("Starting bot...")
         await self.start(BOT_TOKEN)
+
+    async def on_guild_join(self, guild: discord.Guild) -> None:
+        """Event receiver for when the bot joins a new guild."""
+        await self.initialize_guild(guild)
+
+        # Find a channel visible to admins (e.g., a "general" or "admin" channel)
+        admin_channel = next(
+            (
+                channel
+                for channel in guild.text_channels
+                if channel.permissions_for(guild.me).send_messages
+                and channel.overwrites_for(guild.default_role).read_messages is not False
+                and any(
+                    role.permissions.administrator
+                    for role in guild.roles
+                    if channel.overwrites_for(role).read_messages is not False
+                )
+            ),
+            None,
+        )
+
+        if admin_channel:
+            embed = discord.Embed(
+                title="EcoCord Bot Installed!",
+                description="Bot installed. Admins can use `/configure` to set it up.",
+                color=discord.Color.blue(),
+            )
+
+            try:
+                await admin_channel.send(embed=embed)
+                logging.info(
+                    "Sent welcome message in guild %s (ID: %s) in channel %s", guild.name, guild.id, admin_channel.name
+                )
+            except discord.errors.Forbidden:
+                logging.warning(
+                    "Failed to send welcome message in guild %s (ID: %s) due to permissions", guild.name, guild.id
+                )
+        else:
+            logging.warning(
+                "Couldn't find suitable channel to send welcome message in guild %s (ID: %s)", guild.name, guild.id
+            )
+
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
+        """Event receiver for when the bot is removed from a guild."""
+        if guild.id in self.guilds_data:
+            # Stop all ecosystem managers for this guild
+            await self.stop_ecosystems(guild.id)
+            # Remove the guild data
+            del self.guilds_data[guild.id]
+        logging.info("Removed from guild %s (ID: %s)", guild.name, guild.id)
+
+    @app_commands.command()
+    @app_commands.default_permissions(administrator=True)
+    async def configure(self, interaction: discord.Interaction) -> None:
+        """Configure the bot (Admin only)."""
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+            return
+
+        modal = ConfigureModal()
+        await interaction.response.send_modal(modal)
+
+
+class ConfigureModal(ui.Modal, title="Configure EcoCord Bot"):
+    """Modal for configuring the EcoCord Bot."""
+
+    channel_select = ui.ChannelSelect(
+        placeholder="Select channels for ecosystem simulation",
+        min_values=1,
+        max_values=10,
+        channel_types=[discord.ChannelType.text],
+    )
+    gif_channel = ui.ChannelSelect(
+        placeholder="Select channel for GIF threads",
+        min_values=1,
+        max_values=1,
+        channel_types=[discord.ChannelType.text],
+    )
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        channels = [channel.name for channel in self.channel_select.to_numpy()]
+        gif_channel = self.gif_channel.to_numpy()[0]
+
+        client = interaction.client
+        guild_data = client.guilds_data.get(interaction.guild_id)
+        if guild_data:
+            guild_data["gif_channel_id"] = gif_channel.id
+
+        await interaction.response.send_message(
+            f"Bot configured to run in channels: {', '.join(channels)}\n"
+            f"GIF threads will be created in: #{gif_channel.name}",
+            ephemeral=True,
+        )
+
+        await client.reconfigure_channels(interaction.guild_id, self.channel_select.to_numpy())
