@@ -7,9 +7,9 @@ import discord
 from discord import app_commands, ui
 
 from ecosystem import EcosystemManager
+from storage.models import EventsDatabase, event_db_builder
 
 from .discord_event import DiscordEvent, EventType
-from .models import EventsDatabase, event_db_builder
 from .settings import BOT_TOKEN
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
