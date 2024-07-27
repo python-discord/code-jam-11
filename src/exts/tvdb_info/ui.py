@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import NamedTuple, TYPE_CHECKING, TypedDict, override
+from typing import NamedTuple, Self, TYPE_CHECKING, TypedDict, override
 
 import discord
 
@@ -41,17 +41,17 @@ class ReactiveButtonState(TypedDict):
 # It allows us to programmatically change the button's appearance based on the state of the item in the list.
 
 
-class ReactiveButton(NamedTuple):
+class ReactiveButton[V: discord.ui.View](NamedTuple):
     """A tuple of the button, the item in the list, the state when active, and the state when inactive."""
 
-    button: discord.ui.Button  # pyright: ignore[reportMissingTypeArgument]
+    button: discord.ui.Button[V]
     item: UserListItem | None
     active_state: ReactiveButtonState
     inactive_state: ReactiveButtonState
 
 
 class _ReactiveView(discord.ui.View, ABC):
-    _reactive_buttons_store: list[ReactiveButton] | None = None
+    _reactive_buttons_store: list[ReactiveButton[Self]] | None = None
     bot: Bot
 
     async def _update_states(self) -> None:
@@ -81,7 +81,7 @@ class _ReactiveView(discord.ui.View, ABC):
 
     @property
     @abstractmethod
-    async def _reactive_buttons(self) -> list[ReactiveButton]:
+    async def _reactive_buttons(self) -> list[ReactiveButton[Self]]:
         """Get the reactive buttons."""
 
     async def _current_list_item(
@@ -116,7 +116,7 @@ class EpisodeView(_ReactiveView):
         self.season_idx: int = 1
         self.episode_idx: int = 1
 
-        self._reactive_buttons_store: list[ReactiveButton] | None = None
+        self._reactive_buttons_store: list[ReactiveButton[Self]] | None = None
         self._current_watched_list_item_store: UserListItem | None = None
         self._current_favorite_list_item_store: UserListItem | None = None
 
@@ -146,7 +146,7 @@ class EpisodeView(_ReactiveView):
 
     @property
     @override
-    async def _reactive_buttons(self) -> list[ReactiveButton]:
+    async def _reactive_buttons(self) -> list[ReactiveButton[Self]]:
         if self._reactive_buttons_store:
             return self._reactive_buttons_store
         return [
@@ -343,7 +343,7 @@ class InfoView(_ReactiveView):
         )
         self.favorite_btn.callback = self._favorite_callback
         self.add_item(self.favorite_btn)
-        self._reactive_buttons_store: list[ReactiveButton] | None = None
+        self._reactive_buttons_store: list[ReactiveButton[Self]] | None = None
 
         self.episodes_btn: discord.ui.Button[InfoView] | None = None
 
@@ -360,7 +360,7 @@ class InfoView(_ReactiveView):
 
     @property
     @override
-    async def _reactive_buttons(self) -> list[ReactiveButton]:
+    async def _reactive_buttons(self) -> list[ReactiveButton[Self]]:
         if self._reactive_buttons_store:
             return self._reactive_buttons_store
         return [
