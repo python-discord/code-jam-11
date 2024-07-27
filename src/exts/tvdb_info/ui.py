@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import NamedTuple, Self, TYPE_CHECKING, TypedDict, override
+from typing import NamedTuple, Self, TYPE_CHECKING, TypedDict, final, override
 
 import discord
 
@@ -101,6 +101,7 @@ class _ReactiveView(discord.ui.View, ABC):
         return store
 
 
+@final
 class EpisodeView(_ReactiveView):
     """View for displaying episodes of a series and interacting with them."""
 
@@ -302,6 +303,7 @@ class EpisodeView(_ReactiveView):
         await interaction.response.defer()
 
 
+@final
 class InfoView(_ReactiveView):
     """View for displaying information about a movie or series and interacting with it."""
 
