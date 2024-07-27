@@ -367,12 +367,12 @@ class InfoView(_ReactiveView):
                 self.watched_btn,
                 await self._current_watched_list_item,
                 {
-                    "label": "Mark as watched",
+                    "label": "Mark all episodes as watched",
                     "style": discord.ButtonStyle.success,
                     "emoji": "✅",
                 },
                 {
-                    "label": "Unmark as watched",
+                    "label": "Unmark all episodes as watched",
                     # We avoid using .danger because of bad styling in conjunction with the emoji.
                     # It could be possible to use .danger, but would have to use an emoji that fits better.
                     "style": discord.ButtonStyle.primary,

@@ -21,21 +21,6 @@ async def user_get_safe(session: AsyncSession, discord_id: int) -> User:
     return user
 
 
-async def user_create_list(session: AsyncSession, user: User, name: str, item_kind: UserListKind) -> UserList:
-    """Create a new list for a user.
-
-    :raises ValueError: If a list with the same name already exists for the user.
-    """
-    if await session.get(UserList, (user.discord_id, name)) is not None:
-        raise ValueError(f"List with name {name} already exists for user {user.discord_id}.")
-    user_list = UserList(user_id=user.discord_id, name=name, item_kind=item_kind)
-    session.add(user_list)
-    await session.commit()
-    await session.refresh(user, ["lists"])
-
-    return user_list
-
-
 async def user_get_list(session: AsyncSession, user: User, name: str) -> UserList | None:
     """Get a user's list by name."""
     # use where clause on user.id and name
@@ -47,6 +32,21 @@ async def user_get_list(session: AsyncSession, user: User, name: str) -> UserLis
         .where(UserList.name == name)
     )
     return user_list.scalars().first()
+
+
+async def user_create_list(session: AsyncSession, user: User, name: str, item_kind: UserListKind) -> UserList:
+    """Create a new list for a user.
+
+    :raises ValueError: If a list with the same name already exists for the user.
+    """
+    if await user_get_list(session, user, name) is not None:
+        raise ValueError(f"List with name {name} already exists for user {user.discord_id}.")
+    user_list = UserList(user_id=user.discord_id, name=name, item_kind=item_kind)
+    session.add(user_list)
+    await session.commit()
+    await session.refresh(user, ["lists"])
+
+    return user_list
 
 
 async def user_get_list_safe(
