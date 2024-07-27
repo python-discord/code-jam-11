@@ -43,6 +43,26 @@ def lint() -> None:
     run_command(["poetry", "run", "ruff", "check"])
 
 
+def run() -> None:
+    """Run the main application using Poetry."""
+    run_command(["poetry", "run", "python", "src/app.py"])
+
+
+def run_interactive() -> None:
+    """Run the interactive version of the application using Poetry."""
+    run_command(["poetry", "run", "python", "src/app.py", "--interactive"])
+
+
+def run_discord_test() -> None:
+    """Run the Discord test version of the application using Poetry."""
+    run_command(["poetry", "run", "python", "src/app.py", "--test"])
+
+
+def run_gifs() -> None:
+    """Run the GIF generation version of the application using Poetry."""
+    run_command(["poetry", "run", "python", "src/app.py", "--gifs"])
+
+
 def dev() -> None:
     """Run format, lint, and the main application in sequence."""
     run_command(["poetry", "run", "format"])
