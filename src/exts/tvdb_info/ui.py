@@ -8,7 +8,9 @@ from src.bot import Bot
 from src.db_adapters import (
     get_list_item,
     list_put_item,
+    list_put_item_safe,
     list_remove_item,
+    list_remove_item_safe,
     refresh_list_items,
     user_get_list_safe,
     user_get_safe,
@@ -52,6 +54,7 @@ class ReactiveButton[V: discord.ui.View](NamedTuple):
 class _ReactiveView(discord.ui.View, ABC):
     _reactive_buttons_store: list[ReactiveButton[Self]] | None = None
     bot: Bot
+    refreshing: bool = False
 
     async def _update_states(self) -> None:
         for button, item, active_state, inactive_state in await self._reactive_buttons:
@@ -360,8 +363,6 @@ class InfoView(_ReactiveView):
     @property
     @override
     async def _reactive_buttons(self) -> list[ReactiveButton[Self]]:
-        if self._reactive_buttons_store:
-            return self._reactive_buttons_store
         return [
             ReactiveButton(
                 self.watched_btn,
@@ -401,6 +402,23 @@ class InfoView(_ReactiveView):
 
     @property
     async def _current_watched_list_item(self) -> UserListItem | None:
+        if (
+            isinstance(self._current_result, Series)
+            and self._current_result.episodes
+            and self._current_result.episodes[-1].id
+        ):
+            if (
+                not self._current_watched_list_item_store
+                or self._current_watched_list_item_store.tvdb_id != self._current_result.episodes[-1].id
+                or self.refreshing
+            ):
+                self._current_watched_list_item_store = await get_list_item(
+                    self.bot.db_session,
+                    self.watched_list,
+                    self._current_result.episodes[-1].id,
+                    UserListItemKind.EPISODE,
+                )
+            return self._current_watched_list_item_store
         return await self._current_list_item(
             self.watched_list, self._current_watched_list_item_store, self._current_result.id, self._current_kind
         )
@@ -439,6 +457,9 @@ class InfoView(_ReactiveView):
 
     @override
     async def _update_states(self) -> None:
+        self.refreshing = True
+        if isinstance(self._current_result, Series):
+            await self._current_result.ensure_seasons_and_episodes()
         if not hasattr(self, "user"):
             self.user = await user_get_safe(self.bot.db_session, self.user_id)
         if not hasattr(self, "watched_list"):
@@ -449,6 +470,7 @@ class InfoView(_ReactiveView):
         await refresh_list_items(self.bot.db_session, self.favorite_list)
 
         await super()._update_states()
+        self.refreshing = False
 
     async def _dropdown_callback(self, interaction: discord.Interaction) -> None:
         if not self.dropdown.values or not isinstance(self.dropdown.values[0], str):
@@ -486,8 +508,28 @@ class InfoView(_ReactiveView):
         # `defer` technically produces a response to the interaction, and allows us not to respond to the interaction
         # to make the interface feel more intuitive, avoiding unnecessary responses.
         await interaction.response.defer()
-
-        await self._mark_callback(self.watched_list, await self._current_watched_list_item)
+        if isinstance(self._current_result, Movie):
+            await self._mark_callback(self.watched_list, await self._current_watched_list_item)
+        elif await self._current_watched_list_item:
+            for episode in self._current_result.episodes:  # pyright: ignore [reportOptionalIterable]
+                if not episode.id:
+                    continue
+                await list_remove_item_safe(
+                    self.bot.db_session, self.watched_list, episode.id, UserListItemKind.EPISODE
+                )
+                await refresh_list_items(self.bot.db_session, self.watched_list)
+                await self._current_watched_list_item
+        elif self._current_result.episodes and self._current_result.episodes[-1].id:
+            for episode in self._current_result.episodes:
+                if not episode.id:
+                    continue
+                await list_put_item_safe(
+                    self.bot.db_session,
+                    self.watched_list,
+                    episode.id,
+                    UserListItemKind.EPISODE,
+                    self._current_result.id,
+                )
 
         await self._refresh()
 
