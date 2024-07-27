@@ -140,7 +140,7 @@ class _Media(ABC):
         media_id: int | str,
         client: "TvdbClient",
         *,
-        extended: Literal[False],
+        extended: Literal[False] = False,
         short: Literal[False] | None = None,
         meta: None = None,
     ) -> Self: ...
