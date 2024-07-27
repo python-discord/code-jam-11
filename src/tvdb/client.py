@@ -247,6 +247,8 @@ class Series(_Media):
         self.seasons: list[SeasonBaseRecord] | None = None
         if isinstance(self.data, SeriesExtendedRecord):
             self.seasons = self.data.seasons
+            if self.data.episodes:
+                self.episodes = [Episode(episode, client=self.client) for episode in self.data.episodes]
 
     @override
     @classmethod
@@ -290,6 +292,7 @@ class Episode:
         self.image: str | None = self.data.image
         self.name: str | None = self.data.name
         self.overview: str | None = self.data.overview
+        self.number: int | None = self.data.number
         self.season_number: int | None = self.data.season_number
         self.eng_name: str | None = None
         self.eng_overview: str | None = None
@@ -310,6 +313,11 @@ class Episode:
                     for translation in self.data.translations.overview_translations
                     if translation.language == "eng"
                 )
+
+    @property
+    def formatted_name(self) -> str:
+        """Returns the name in format SxxEyy - Name."""
+        return f"S{self.season_number:02}E{self.number:02} - {self.name}"
 
     @classmethod
     async def fetch(cls, media_id: str | int, *, client: "TvdbClient", extended: bool = True) -> "Episode":
