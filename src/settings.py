@@ -8,6 +8,7 @@ TVDB_API_KEY = get_config("TVDB_API_KEY")
 
 SQLITE_DATABASE_FILE = get_config("SQLITE_DATABASE_FILE", cast=Path, default=Path("./database.db"))
 ECHO_SQL = get_config("ECHO_SQL", cast=bool, default=False)
+DB_ALWAYS_MIGRATE = get_config("DB_ALWAYS_MIGRATE", cast=bool, default=False)
 
 FAIL_EMOJI = "❌"
 SUCCESS_EMOJI = "✅"
