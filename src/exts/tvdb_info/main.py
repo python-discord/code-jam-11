@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Literal, cast
 
-from discord import ApplicationContext, Cog, option, slash_command
+from discord import ApplicationContext, Cog, Member, User, option, slash_command
 
 from src.bot import Bot
 from src.tvdb import FetchMeta, Movie, Series, TvdbClient
@@ -8,7 +8,7 @@ from src.tvdb.errors import InvalidIdError
 from src.utils.log import get_logger
 from src.utils.ratelimit import rate_limited
 
-from .ui import InfoView
+from .ui import InfoView, ProfileView
 
 log = get_logger(__name__)
 
@@ -22,6 +22,26 @@ class InfoCog(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
         self.tvdb_client = TvdbClient(self.bot.http_session, self.bot.cache)
+
+    @slash_command()
+    @option("user", input_type=User, description="The user to show the profile for.", required=False)
+    async def profile(self, ctx: ApplicationContext, *, user: User | Member | None = None) -> None:
+        """Show a user's profile."""
+        await ctx.defer()
+
+        if user is None:
+            user = cast(User | Member, ctx.user)  # for some reason, pyright thinks user can be None here
+
+        # Convert Member to User (Member isn't a subclass of User...)
+        if isinstance(user, Member):
+            user = user._user  # pyright: ignore[reportPrivateUsage]
+
+        # TODO: Friend check (don't allow looking at other people's profiles, unless
+        # they are friends with the user, or it's their own profile)
+        # https://github.com/ItsDrike/code-jam-2024/issues/51
+
+        view = ProfileView(self.bot, self.tvdb_client, user)
+        await view.send(ctx.interaction)
 
     @slash_command()
     @option("query", input_type=str, description="The query to search for.")
