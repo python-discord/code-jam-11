@@ -37,12 +37,11 @@ class ReactiveButtonState(TypedDict):
     emoji: str
 
 
-# A reactive button is a tuple of the button, the item in the list, the state when active, and the state when inactive.
-# It allows us to programmatically change the button's appearance based on the state of the item in the list.
-
-
 class ReactiveButton[V: discord.ui.View](NamedTuple):
-    """A tuple of the button, the item in the list, the state when active, and the state when inactive."""
+    """A tuple of the button, the item in the list, the state when active, and the state when inactive.
+
+    This allows us to programmatically change the button's appearance based on the state of the item in the list.
+    """
 
     button: discord.ui.Button[V]
     item: UserListItem | None
