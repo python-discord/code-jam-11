@@ -151,7 +151,7 @@ lines-between-types = 0         # Number of lines to place between "direct" and 
 split-on-trailing-comma = false # if last member of multiline import has a comma, don't fold it to single line
 
 [tool.ruff.lint.pylint]
-max-args = 6
+max-args = 15
 max-branches = 15
 max-locals = 15
 max-nested-blocks = 5

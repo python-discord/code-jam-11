@@ -15,7 +15,7 @@ log = get_logger(__name__)
 class RateLimitExceededError(Exception):
     """Exception raised when a rate limit was exceeded."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         msg: str | None,
         *,
