@@ -13,7 +13,7 @@ from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-from src.settings import ECHO_SQL, SQLITE_DATABASE_FILE
+from src.settings import DB_ALWAYS_MIGRATE, ECHO_SQL, SQLITE_DATABASE_FILE
 from src.utils.log import get_logger
 
 log = get_logger(__name__)
@@ -104,7 +104,7 @@ def apply_db_migrations(db_conn: Connection) -> None:
     # If there is no current revision, this is a brand new database
     # instead of going through the migrations, we can instead use metadata.create_all
     # to create all tables and then stamp the database with the head revision.
-    if current_rev is None:
+    if current_rev is None and not DB_ALWAYS_MIGRATE:
         log.info("Performing initial database setup (creating tables)")
         Base.metadata.create_all(db_conn)
         context.stamp(script, "head")

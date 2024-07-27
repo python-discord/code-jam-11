@@ -72,6 +72,7 @@ TODO: Separate these to variables necessary to run the bot, and those only relev
 | `TVDB_RATE_LIMIT_PERIOD`   | float  | 5             | Period of time in seconds, within which the bot can make up to `TVDB_RATE_LIMIT_REQUESTS` requests to the TVDB API. |
 | `SQLITE_DATABASE_FILE`     | path   | ./database.db | Path to sqlite database file, can be relative to project root (if the file doesn't yet exists, it will be created)  |
 | `ECHO_SQL`                 | bool   | 0             | If `1`, print out every SQL command that SQLAlchemy library runs internally (can be useful when debugging)          |
+| `DB_ALWAYS_MIGRATE`        | bool   | 0             | If `1`, database migrations will always be performed, even on a new database (instead of just creating the tables). |
 | `DEBUG`                    | bool   | 0             | If `1`, debug logs will be enabled, if `0` only info logs and above will be shown                                   |
 | `LOG_FILE`                 | path   | N/A           | If set, also write the logs into given file, otherwise, only print them                                             |
 | `TRACE_LEVEL_FILTER`       | custom | N/A           | Configuration for trace level logging, see: [trace logs config section](#trace-logs-config)                         |
