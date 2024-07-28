@@ -22,9 +22,8 @@ class Alias(BaseModel):
     language: str | None = Field(
         default=None,
         description="A 3-4 character string indicating the language of the alias, as defined in Language.",
-        max_length=4,
     )
-    name: str | None = Field(default=None, description="A string containing the alias itself.", max_length=100)
+    name: str | None = Field(default=None, description="A string containing the alias itself.")
 
 
 class ArtworkBaseRecord(BaseModel):
