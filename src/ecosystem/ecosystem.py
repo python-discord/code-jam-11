@@ -4,9 +4,10 @@ import contextlib
 import io
 import multiprocessing
 import time
+from collections import deque
 from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import numpy as np
@@ -29,8 +30,8 @@ from bot.discord_event import (
 )
 from storage import Database, UserInfo
 
-from .cloud_manager import CloudManager
 from .bird import Bird
+from .cloud_manager import CloudManager
 from .frog import Frog
 from .snake import Snake
 from .speech_bubble import SpeechBubble
@@ -113,12 +114,7 @@ class Ecosystem:
 
         self.cloud_manager = CloudManager(self.width, self.height)
         self.word_cloud = WordCloudObject(
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod "
-            "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, "
-            "quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo "
-            "consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse "
-            "cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat "
-            "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+            "",
             self.width,
             self.height,
             5,
@@ -432,9 +428,10 @@ class EcosystemManager:
         self.gif_queue = multiprocessing.Queue()
         self.running = False
 
-        self.user_frogs = {}
+        self.user_critters = {}
         self.last_activity = {}
         self.fake_user_ids = set()
+        self.message_history = deque()
 
     def start(self, show_controls: bool = True) -> None:
         """Start the ecosystem simulation.
@@ -610,22 +607,25 @@ class EcosystemManager:
 
         """
         event, user_info = event_data
-        current_time = time.time()
+        current_time = datetime.now(UTC)
         user_id = event.member.id
 
-        if event.type in ("TYPING", "MESSAGE"):
-            self._handle_user_activity(ecosystem, user_id, current_time, event.type == "TYPING", user_info)
+        if event.type == "MESSAGE":
+            self._handle_user_activity(ecosystem, user_id, current_time, False, user_info)
+            self._add_message_to_history(ecosystem, event.content, current_time)
 
-            if event.type == "MESSAGE":
-                critter = self.user_frogs.get(user_id)
-                if critter:
-                    speech_bubble = SpeechBubble(critter, event.content, duration=5, bg_color=user_info.role_color)
-                    ecosystem.speech_bubbles.append(speech_bubble)
+            critter = self.user_critters.get(user_id)
+            if critter:
+                speech_bubble = SpeechBubble(critter, event.content, duration=5, bg_color=user_info.role_color)
+                ecosystem.speech_bubbles.append(speech_bubble)
+
+        elif event.type == "TYPING":
+            self._handle_user_activity(ecosystem, user_id, current_time, True, user_info)
 
         self._remove_inactive_users(ecosystem, current_time)
 
     def _handle_user_activity(
-        self, ecosystem: Ecosystem, user_id: int, current_time: float, is_typing: bool, user_info: UserInfo
+        self, ecosystem: Ecosystem, user_id: int, current_time: datetime, is_typing: bool, user_info: UserInfo
     ) -> None:
         """Handle user activity in the ecosystem.
 
@@ -633,15 +633,15 @@ class EcosystemManager:
         ----
             ecosystem (Ecosystem): The ecosystem instance.
             user_id (int): ID of the user.
-            current_time (float): Current timestamp.
+            current_time (datetime): Current timestamp.
             is_typing (bool): Whether the user is typing.
             user_info (UserInfo): User information including avatar and role color.
 
         """
-        if user_id not in self.user_frogs:
+        if user_id not in self.user_critters:
             self._spawn_new_critter(ecosystem, user_id, user_info)
         elif is_typing:
-            self.user_frogs[user_id].move()
+            self.user_critters[user_id].move()
 
         self.last_activity[user_id] = current_time
         self._remove_inactive_users(ecosystem, current_time)
@@ -669,7 +669,7 @@ class EcosystemManager:
             self._spawn_new_critter(ecosystem, user_info.user_id, user_info)
 
     def _spawn_new_critter(self, ecosystem: Ecosystem, user_id: int, user_info: UserInfo | None = None) -> None:
-        if user_id not in self.user_frogs:
+        if user_id not in self.user_critters:
             critter_type = random.choice([Bird, Snake, Frog])
 
             avatar_data = user_info.avatar_data if user_info else None
@@ -683,19 +683,19 @@ class EcosystemManager:
                 avatar=avatar_data,
             )
             critter.spawn()
-            self.user_frogs[user_id] = critter
+            self.user_critters[user_id] = critter
             ecosystem.critters.append(critter)
 
-    def _remove_inactive_users(self, ecosystem: Ecosystem, current_time: float) -> None:
+    def _remove_inactive_users(self, ecosystem: Ecosystem, current_time: datetime) -> None:
         """Remove inactive users from the ecosystem.
 
         Args:
         ----
             ecosystem (Ecosystem): The ecosystem instance.
-            current_time (float): Current timestamp.
+            current_time (datetime): Current timestamp.
 
         """
-        one_minute = 60
+        one_minute = timedelta(minutes=1)
         inactive_users = [
             user_id for user_id, last_time in self.last_activity.items() if current_time - last_time > one_minute
         ]
@@ -703,8 +703,8 @@ class EcosystemManager:
             self._remove_critter(ecosystem, user_id)
 
     def _remove_critter(self, ecosystem: Ecosystem, user_id: int) -> None:
-        if user_id in self.user_frogs:
-            critter = self.user_frogs.pop(user_id)
+        if user_id in self.user_critters:
+            critter = self.user_critters.pop(user_id)
             ecosystem.critters.discard(critter)
         self.last_activity.pop(user_id, None)
 
@@ -748,3 +748,18 @@ class EcosystemManager:
             self.fake_user_ids.add(user_info.user_id)
         else:
             print("No user info found in the database.")
+
+    def _add_message_to_history(self, ecosystem: Ecosystem, content: str, timestamp: datetime) -> None:
+        self.message_history.append((content, timestamp))
+        self._clean_old_messages()
+        self._update_word_cloud(ecosystem)
+
+    def _clean_old_messages(self) -> None:
+        current_time = datetime.now(UTC)
+        one_hour_ago = current_time - timedelta(hours=1)
+        while self.message_history and self.message_history[0][1] < one_hour_ago:
+            self.message_history.popleft()
+
+    def _update_word_cloud(self, ecosystem: Ecosystem) -> None:
+        all_text = " ".join(content for content, _ in self.message_history)
+        ecosystem.word_cloud.change_words(all_text)

@@ -16,17 +16,21 @@ class WordCloudObject:
 
     def generate_wordcloud(self, surface: pygame.Surface, words: str) -> None:
         """Generate a new word cloud with white text."""
-        self.wordcloud = WordCloud(
-            width=self.width,
-            height=self.height,
-            background_color=None,
-            mode="RGBA",
-            color_func=lambda *_args, **_kwargs: (self.strength, self.strength, self.strength),
-        ).generate(words)
+        try:
+            self.wordcloud = WordCloud(
+                width=self.width,
+                height=self.height,
+                background_color=None,
+                mode="RGBA",
+                color_func=lambda *_args, **_kwargs: (self.strength, self.strength, self.strength),
+            ).generate(words)
+        except ValueError:
+            self.wordcloud = None
 
-        wordcloud_image = self.wordcloud.to_image()
-        self.image = pygame.image.fromstring(wordcloud_image.tobytes(), wordcloud_image.size, wordcloud_image.mode)
-        self.image = self.image.convert_alpha()
+        if self.wordcloud:
+            wordcloud_image = self.wordcloud.to_image()
+            self.image = pygame.image.fromstring(wordcloud_image.tobytes(), wordcloud_image.size, wordcloud_image.mode)
+            self.image = self.image.convert_alpha()
 
     def change_words(self, new_words: str) -> None:
         """Change the words in the word cloud."""
@@ -37,5 +41,6 @@ class WordCloudObject:
         if self.image is None:
             self.generate_wordcloud(surface, self.words)
 
-        # Blend the word cloud with the background
-        surface.blit(self.image, (0, 0), special_flags=pygame.BLEND_RGBA_SUB)
+        if self.image:
+            # Blend the word cloud with the background
+            surface.blit(self.image, (0, 0), special_flags=pygame.BLEND_RGBA_SUB)
