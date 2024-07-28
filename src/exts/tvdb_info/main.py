@@ -8,7 +8,7 @@ from src.tvdb.errors import InvalidIdError
 from src.utils.log import get_logger
 from src.utils.ratelimit import rate_limited
 
-from .ui import InfoView, ProfileView
+from .ui import ProfileView, search_view
 
 log = get_logger(__name__)
 
@@ -100,7 +100,7 @@ class InfoCog(Cog):
                 await ctx.respond("No results found.")
                 return
 
-        view = InfoView(self.bot, ctx.user.id, response)
+        view = await search_view(self.bot, ctx.user.id, response)
         await view.send(ctx.interaction)
 
 
