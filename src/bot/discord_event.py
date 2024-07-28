@@ -107,12 +107,13 @@ class DiscordEvent:
 
     Attributes
     ----------
-        type (str): The type of the Discord event.
+        type (EventType): The type of the Discord event.
         timestamp (datetime): The timestamp when the event occurred.
         guild (SerializableGuild): Serializable representation of the Discord guild.
         channel (SerializableTextChannel): Serializable representation of the text channel.
         member (SerializableMember | FakeUser): Serializable representation of the member or a FakeUser.
         content (str): The content or message associated with the event.
+        reaction_image (Optional[bytes]): The image data of the reaction emoji, if applicable.
 
     """
 
@@ -122,16 +123,18 @@ class DiscordEvent:
     channel: SerializableTextChannel
     member: SerializableMember | FakeUser
     content: str
+    reaction_image: bytes | None = None
 
     @classmethod
     def from_discord_objects(
         cls,
-        type: str,
+        type: EventType,
         timestamp: datetime,
         guild: Optional["discord.Guild"],
         channel: Optional["discord.TextChannel"],
         member: Optional["discord.Member"],
         content: str,
+        reaction_image: bytes | None = None,
     ) -> "DiscordEvent":
         return cls(
             type=type,
@@ -147,9 +150,10 @@ class DiscordEvent:
                 [role.id for role in member.roles],
                 member.guild.id,
                 str(member.avatar.url) if member.avatar else None,
-                member.color,
+                str(member.color),
             )
             if member
             else None,
             content=content,
+            reaction_image=reaction_image,
         )

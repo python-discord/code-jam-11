@@ -41,10 +41,9 @@ class EcoCordClient(discord.Client):
         print(f"Logged in as {self.user} (ID: {self.user.id})")
 
         for guild in self.guilds:
-            await self.tree.sync(guild=guild)
-            print(f"Synced commands for guild: {guild.name}")
-
-        for guild in self.guilds:
+            self.loop.create_task(
+                self.safe_task(lambda g=guild: self.tree.sync(guild=g), f"sync_commands for {guild.name}")
+            )
             await self.initialize_guild(guild)
 
     async def initialize_guild(self, guild: discord.Guild) -> None:
@@ -144,6 +143,10 @@ class EcoCordClient(discord.Client):
         """
         channel = self.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
+
+        # Fetch the reaction image
+        reaction_image_bytes = await self.get_reaction_image(payload.emoji)
+
         event = DiscordEvent.from_discord_objects(
             type=EventType.REACTION,
             timestamp=message.created_at,
@@ -151,8 +154,22 @@ class EcoCordClient(discord.Client):
             channel=channel,
             member=payload.member,
             content=f"{payload.emoji} added on {message.content}",
+            reaction_image=reaction_image_bytes,
         )
         await self.process_event(event)
+
+    async def get_reaction_image(self, emoji_obj: discord.PartialEmoji | str) -> bytes | None:
+        """Fetch the image data for a given emoji."""
+        if not isinstance(emoji_obj, discord.PartialEmoji):
+            return None
+
+        if emoji_obj.is_custom_emoji():
+            emoji_url = str(emoji_obj.url)
+            async with aiohttp.ClientSession() as session, session.get(emoji_url) as response:
+                if response.status == 200:
+                    return await response.read()
+
+        return None
 
     async def on_raw_typing(self, payload: discord.RawTypingEvent) -> None:
         """Event receiver for when a user starts typing in a channel.

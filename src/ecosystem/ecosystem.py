@@ -34,6 +34,7 @@ from storage import Database, UserInfo
 from .bird import Bird
 from .cloud_manager import CloudManager
 from .frog import Frog
+from .reaction_emoji import ReactionEmoji
 from .snake import Snake
 from .speech_bubble import SpeechBubble
 from .wordclouds import WordCloudObject
@@ -84,6 +85,7 @@ class Ecosystem:
 
         self.critters = []
         self.speech_bubbles = []
+        self.reaction_emojis = []
 
         self.font = None
         self.activity_slider = None
@@ -169,6 +171,10 @@ class Ecosystem:
         for bubble in self.speech_bubbles:
             bubble.update(delta)
 
+        self.reaction_emojis = [emoji for emoji in self.reaction_emojis if not emoji.is_expired()]
+        for emoji in self.reaction_emojis:
+            emoji.update(delta)
+
     def _clean_up_entities(self) -> None:
         """Remove dead entities from the ecosystem."""
         self.critters = [critter for critter in self.critters if critter.alive]
@@ -203,6 +209,9 @@ class Ecosystem:
 
         for critter in self.critters:
             critter.draw(self.surface)
+
+        for emoji in self.reaction_emojis:
+            emoji.draw(self.surface)
 
         self.word_cloud.draw(self.surface)
 
@@ -623,6 +632,8 @@ class EcosystemManager:
                 ecosystem.speech_bubbles.append(speech_bubble)
         elif event.type == EventType.TYPING:
             self._handle_user_activity(ecosystem, user_id, current_time, True, user_info)
+        elif event.type == EventType.REACTION:
+            self._handle_reaction(ecosystem, event)
 
         self._remove_inactive_users(ecosystem, current_time)
 
@@ -763,3 +774,13 @@ class EcosystemManager:
     def _update_word_cloud(self, ecosystem: Ecosystem) -> None:
         all_text = " ".join(content for content, _ in self.message_history)
         ecosystem.word_cloud.change_words(all_text)
+
+    def _handle_reaction(self, ecosystem: Ecosystem, event: DiscordEvent) -> None:
+        if event.reaction_image:
+            reaction_emoji = ReactionEmoji(
+                screen_width=ecosystem.width,
+                screen_height=ecosystem.height,
+                image_data=event.reaction_image,
+                duration=5,
+            )
+            ecosystem.reaction_emojis.append(reaction_emoji)

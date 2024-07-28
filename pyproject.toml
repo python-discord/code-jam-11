@@ -20,6 +20,7 @@ numpy = "^2.0.0"
 pydantic = "^2.8.2"
 aiosqlite = "^0.20.0"
 wordcloud = "^1.9.3"
+emoji = "^2.12.1"
 
 [tool.poetry.dev-dependencies]
 ruff = "0.5.4"
