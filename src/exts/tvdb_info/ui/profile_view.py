@@ -8,7 +8,7 @@ from src.db_adapters import refresh_list_items, user_get_list_safe, user_get_saf
 from src.db_tables.user_list import UserList, UserListItem, UserListItemKind
 from src.settings import MOVIE_EMOJI, SERIES_EMOJI
 from src.tvdb import Movie, Series
-from src.tvdb.client import Episode, TvdbClient
+from src.tvdb.client import Episode, FetchMeta, TvdbClient
 from src.utils.log import get_logger
 
 if TYPE_CHECKING:
@@ -32,8 +32,11 @@ class ProfileView(discord.ui.View):
 
         self.watched_items: list[Episode | Series | Movie]
         self.favorite_items: list[Episode | Series | Movie]
+        self.fetched_series: dict[int, Series] = {}
+        self.watched_episodes: set[UserListItem] = set()
+        self.watched_episodes_ids: set[int] = set()
 
-    def _get_embed(self) -> discord.Embed:
+    async def _get_embed(self) -> discord.Embed:
         embed = discord.Embed(
             title="Profile",
             description=f"Profile for {self.discord_user.mention}",
@@ -42,7 +45,7 @@ class ProfileView(discord.ui.View):
         )
 
         total_movies = len([item for item in self.watched_items if isinstance(item, Movie)])
-        total_series = len([item for item in self.watched_items if isinstance(item, Series)])
+        total_series = len(self.fetched_series)
         total_episodes = len([item for item in self.watched_items if isinstance(item, Episode)])
         stats_str = textwrap.dedent(
             f"""
@@ -67,13 +70,22 @@ class ProfileView(discord.ui.View):
                 if not isinstance(item, Episode)
             ),
         )
+        watched_str: str = ""
+        for item in self.watched_items:
+            if isinstance(item, Movie):
+                watched_str += f"{MOVIE_EMOJI} {item.bilingual_name}\n"
+        for series in self.fetched_series.values():
+            if not series.episodes:
+                continue
+            for i, episode in enumerate(reversed(series.episodes)):
+                if episode.id in self.watched_episodes_ids:
+                    watched_str += (
+                        f"{SERIES_EMOJI} {series.bilingual_name} - {episode.formatted_name if i != 0 else 'entirely'}"
+                    )
+
         embed.add_field(
             name="Watched",
-            value="\n".join(
-                f"{MOVIE_EMOJI if isinstance(item, Movie) else SERIES_EMOJI} {item.bilingual_name}"
-                for item in self.watched_items
-                if not isinstance(item, Episode)
-            ),
+            value=watched_str,
         )
         return embed
 
@@ -98,7 +110,19 @@ class ProfileView(discord.ui.View):
         if not hasattr(self, "watched_items"):
             self.watched_list = await user_get_list_safe(self.bot.db_session, self.user, "watched")
         await refresh_list_items(self.bot.db_session, self.watched_list)
-        self.watched_items = [await self._fetch_media(item) for item in self.watched_list.items]
+        self.watched_items = [
+            await self._fetch_media(item) for item in self.watched_list.items if item.kind != UserListItemKind.EPISODE
+        ]
+        self.watched_episodes = {item for item in self.watched_list.items if item.kind == UserListItemKind.EPISODE}
+        self.watched_episodes_ids = {item.tvdb_id for item in self.watched_episodes}
+        for episode in self.watched_episodes:
+            await self.bot.db_session.refresh(episode, ["episode"])
+            if not self.fetched_series.get(episode.episode.series_id):
+                series = await Series.fetch(
+                    episode.episode.series_id, client=self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS
+                )
+                await series.fetch_episodes()
+                self.fetched_series[episode.episode.series_id] = series
 
         if not hasattr(self, "favorite_list"):
             self.favorite_list = await user_get_list_safe(self.bot.db_session, self.user, "favorite")
@@ -108,4 +132,4 @@ class ProfileView(discord.ui.View):
     async def send(self, interaction: discord.Interaction) -> None:
         """Send the view."""
         await self._update_states()
-        await interaction.respond(embed=self._get_embed(), view=self)
+        await interaction.respond(embed=await self._get_embed(), view=self)

@@ -146,20 +146,20 @@ class MediaView(discord.ui.View, ABC):
 
     async def _watched_button_callback(self, interaction: discord.Interaction) -> None:
         """Callback for when the user clicks on the mark as watched button."""
+        await interaction.response.defer()
         cur_state = self.watched_button.state
         await self.set_watched(not cur_state)
         self.watched_button.set_state(not cur_state)
 
-        await interaction.response.defer()
         await self._refresh()
 
     async def _favorite_button_callback(self, interaction: discord.Interaction) -> None:
         """Callback for when the user clicks on the mark as favorite button."""
+        await interaction.response.defer()
         cur_state = self.favorite_button.state
         await self.set_favorite(not cur_state)
         self.favorite_button.set_state(not cur_state)
 
-        await interaction.response.defer()
         await self._refresh()
 
 
