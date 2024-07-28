@@ -30,7 +30,9 @@ from bot.discord_event import (
 from storage import Database, UserInfo
 
 from .cloud_manager import CloudManager
+from .bird import Bird
 from .frog import Frog
+from .snake import Snake
 from .speech_bubble import SpeechBubble
 from .wordclouds import WordCloudObject
 
@@ -668,7 +670,7 @@ class EcosystemManager:
 
     def _spawn_new_critter(self, ecosystem: Ecosystem, user_id: int, user_info: UserInfo | None = None) -> None:
         if user_id not in self.user_frogs:
-            critter_type = random.choice([Frog])
+            critter_type = random.choice([Bird, Snake, Frog])
 
             avatar_data = user_info.avatar_data if user_info else None
 
