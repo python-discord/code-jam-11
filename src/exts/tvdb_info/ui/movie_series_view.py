@@ -186,7 +186,7 @@ class SeriesView(_SeriesOrMovieView):
         # Series uses a special method to determine whether it's watched.
         # This approach uses the last episode of the series to determine if the series is watched.
 
-        # If the series has no episodes, fall back to marking the season itself as watched.
+        # If the series has no episodes, fall back to marking the series itself as watched.
         if self.media_data.episodes is None:
             return await super().is_watched()
 

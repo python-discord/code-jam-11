@@ -80,7 +80,7 @@ class MediaView(discord.ui.View, ABC):
         the current state of the media or the user, configuring the internal state accordingly.
 
         Tasks that need to be performed here:
-            - Ensure to run the super call to this method.
+            - Call `self._add_items()`
             - Set the state of the watched and favorite buttons.
 
         This method will only be called once.
