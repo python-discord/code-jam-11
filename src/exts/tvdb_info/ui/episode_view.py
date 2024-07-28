@@ -22,13 +22,20 @@ class EpisodeView(DynamicMediaView):
         *,
         bot: Bot,
         user_id: int,
+        invoker_user_id: int,
         watched_list: UserList,
         favorite_list: UserList,
         series: Series,
         season_idx: int = 1,
         episode_idx: int = 1,
     ) -> None:
-        super().__init__(bot=bot, user_id=user_id, watched_list=watched_list, favorite_list=favorite_list)
+        super().__init__(
+            bot=bot,
+            user_id=user_id,
+            invoker_user_id=invoker_user_id,
+            watched_list=watched_list,
+            favorite_list=favorite_list,
+        )
 
         self.series = series
 
@@ -156,6 +163,9 @@ class EpisodeView(DynamicMediaView):
 
     async def _episode_dropdown_callback(self, interaction: discord.Interaction) -> None:
         """Callback for when the user selects an episode from the drop-down."""
+        if not await self._ensure_correct_invoker(interaction):
+            return
+
         if not self.episode_dropdown.values or not isinstance(self.episode_dropdown.values[0], str):
             raise ValueError("Episode dropdown values are empty or non-string, but callback was triggered.")
 
@@ -171,6 +181,9 @@ class EpisodeView(DynamicMediaView):
 
     async def _season_dropdown_callback(self, interaction: discord.Interaction) -> None:
         """Callback for when the user selects a season from the drop-down."""
+        if not await self._ensure_correct_invoker(interaction):
+            return
+
         if not self.season_dropdown.values or not isinstance(self.season_dropdown.values[0], str):
             raise ValueError("Episode dropdown values are empty or non-string, but callback was triggered.")
 

@@ -13,7 +13,15 @@ from ._reactive_buttons import ReactiveButton, ReactiveButtonStateStyle
 class MediaView(ErrorHandledView, ABC):
     """Base class for views that display info about some media (movie/series/episode)."""
 
-    def __init__(self, *, bot: Bot, user_id: int, watched_list: UserList, favorite_list: UserList) -> None:
+    def __init__(
+        self,
+        *,
+        bot: Bot,
+        user_id: int,
+        invoker_user_id: int,
+        watched_list: UserList,
+        favorite_list: UserList,
+    ) -> None:
         """Initialize MediaView.
 
         :param bot: The bot instance.
@@ -30,6 +38,7 @@ class MediaView(ErrorHandledView, ABC):
 
         self.bot = bot
         self.user_id = user_id
+        self.invoker_user_id = invoker_user_id
         self.watched_list = watched_list
         self.favorite_list = favorite_list
 
@@ -108,6 +117,16 @@ class MediaView(ErrorHandledView, ABC):
 
         await self.message.edit(embed=self._get_embed(), view=self)
 
+    async def _ensure_correct_invoker(self, interaction: discord.Interaction) -> bool:
+        """Ensure that the interaction was invoked by the author of this view."""
+        if interaction.user is None:
+            raise ValueError("Interaction user is None")
+
+        if interaction.user.id != self.invoker_user_id:
+            await interaction.response.send_message("You can't interact with this view.", ephemeral=True)
+            return False
+        return True
+
     @abstractmethod
     async def is_favorite(self) -> bool:
         """Check if the current media is marked as favorite by the user.
@@ -147,6 +166,9 @@ class MediaView(ErrorHandledView, ABC):
 
     async def _watched_button_callback(self, interaction: discord.Interaction) -> None:
         """Callback for when the user clicks on the mark as watched button."""
+        if not await self._ensure_correct_invoker(interaction):
+            return
+
         await interaction.response.defer()
         cur_state = self.watched_button.state
         await self.set_watched(not cur_state)
@@ -156,6 +178,9 @@ class MediaView(ErrorHandledView, ABC):
 
     async def _favorite_button_callback(self, interaction: discord.Interaction) -> None:
         """Callback for when the user clicks on the mark as favorite button."""
+        if not await self._ensure_correct_invoker(interaction):
+            return
+
         await interaction.response.defer()
         cur_state = self.favorite_button.state
         await self.set_favorite(not cur_state)

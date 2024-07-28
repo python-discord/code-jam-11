@@ -1,4 +1,4 @@
-from typing import Literal, cast
+from typing import Literal
 
 from discord import ApplicationContext, Cog, Member, User, option, slash_command
 
@@ -31,7 +31,7 @@ class InfoCog(Cog):
         await ctx.defer()
 
         if user is None:
-            user = cast(User | Member, ctx.user)  # for some reason, pyright thinks user can be None here
+            user = ctx.author
 
         # Convert Member to User (Member isn't a subclass of User...)
         if isinstance(user, Member):
@@ -46,6 +46,7 @@ class InfoCog(Cog):
             bot=self.bot,
             tvdb_client=self.tvdb_client,
             user=user,
+            invoker_user_id=ctx.author.id,
             watched_list=await user_get_list_safe(self.bot.db_session, db_user, "watched"),
             favorite_list=await user_get_list_safe(self.bot.db_session, db_user, "favorite"),
         )
@@ -114,7 +115,7 @@ class InfoCog(Cog):
                 await ctx.respond("No results found.")
                 return
 
-        view = await search_view(self.bot, ctx.user.id, response)
+        view = await search_view(self.bot, ctx.user.id, ctx.user.id, response)
         await view.send(ctx.interaction)
 
 
