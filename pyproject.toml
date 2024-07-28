@@ -49,6 +49,8 @@ ignore = [
     "D415",
     # Docstring quotes.
     "D301",
+    # Imperative mood.
+    "D401",
     # Builtins.
     "A",
     # Print statements.
@@ -60,4 +62,8 @@ ignore = [
     # Annotations.
     "ANN101",
     "ANN102",
+    # Assert.
+    "S101",
+    "COM812",
+    "TRY401",
 ]

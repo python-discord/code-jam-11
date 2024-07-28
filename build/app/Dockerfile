@@ -8,6 +8,7 @@ RUN mkdir app
 WORKDIR /app
 
 COPY ./app/ ./app/
+COPY ./trivia.db ./trivia.db
 COPY ./requirements-dev.txt .
 
 RUN pip install watchdog==4.0.1
