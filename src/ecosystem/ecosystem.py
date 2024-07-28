@@ -4,6 +4,7 @@ import io
 import multiprocessing
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 
 import numpy as np
 
@@ -17,12 +18,19 @@ import random
 
 from PIL import Image
 
-from bot.discord_event import DiscordEvent
+from bot.discord_event import (
+    DiscordEvent,
+    FakeUser,
+    SerializableGuild,
+    SerializableMember,
+    SerializableTextChannel,
+)
 
 from .bird import Bird
 from .cloud_manager import CloudManager
 from .frog import Frog
 from .snake import Snake
+from .speech_bubble import SpeechBubble
 from .wordclouds import WordCloudObject
 
 
@@ -70,6 +78,7 @@ class Ecosystem:
         ]
 
         self.critters = []
+        self.speech_bubbles = []
 
         self.font = None
         self.activity_slider = None
@@ -171,6 +180,10 @@ class Ecosystem:
 
         self.cloud_manager.update(delta)
 
+        self.speech_bubbles = [bubble for bubble in self.speech_bubbles if not bubble.is_expired()]
+        for bubble in self.speech_bubbles:
+            bubble.update(delta)
+
     def _handle_standard_spawning(self, delta: float) -> None:
         """Handle the standard spawning of entities based on activity level.
 
@@ -215,6 +228,9 @@ class Ecosystem:
             critter.draw(self.surface)
 
         self.word_cloud.draw(self.surface)
+
+        for bubble in self.speech_bubbles:
+            bubble.draw(self.surface)
 
         return self.surface
 
@@ -425,9 +441,9 @@ class EcosystemManager:
         self.gif_queue = multiprocessing.Queue()
         self.running = False
 
-        if not self.interactive:
-            self.user_frogs = {}
-            self.last_activity = {}
+        self.user_frogs = {}
+        self.last_activity = {}
+        self.fake_user_ids = []
 
     def start(self, show_controls: bool = True) -> None:
         """Start the ecosystem simulation.
@@ -475,6 +491,12 @@ class EcosystemManager:
 
         clock = pygame.time.Clock()
 
+        last_message_time = time.time()
+        message_interval = 2.0  # Send a message every 2 seconds
+
+        if self.interactive:
+            self._spawn_initial_critters(ecosystem)
+
         while self.running:
             delta = clock.tick(self.fps) / 1000.0
 
@@ -484,6 +506,12 @@ class EcosystemManager:
                         self.running = False
                     elif show_controls and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         self._handle_mouse_click(ecosystem, event.pos)
+
+                # Simulate random messages
+                current_time = time.time()
+                if current_time - last_message_time >= message_interval:
+                    self._simulate_random_message(ecosystem)
+                    last_message_time = current_time
 
             ecosystem.update(delta)
             screen.blit(ecosystem.draw(), (0, 0))
@@ -580,14 +608,19 @@ class EcosystemManager:
             event (DiscordEvent): The Discord event to process.
 
         """
-        if not self.interactive:
-            current_time = time.time()
-            user_id = event.user.id
+        current_time = time.time()
+        user_id = event.member.id
 
-            if event.type in ("typing", "message"):
-                self._handle_user_activity(ecosystem, user_id, current_time, event.type == "typing")
+        if event.type in ("TYPING", "MESSAGE"):
+            self._handle_user_activity(ecosystem, user_id, current_time, event.type == "TYPING")
 
-            self._remove_inactive_users(ecosystem, current_time)
+            if event.type == "MESSAGE":
+                critter = self.user_frogs.get(user_id)
+                if critter:
+                    speech_bubble = SpeechBubble(critter, event.content, duration=5)
+                    ecosystem.speech_bubbles.append(speech_bubble)
+
+        self._remove_inactive_users(ecosystem, current_time)
 
     def _handle_user_activity(self, ecosystem: Ecosystem, user_id: int, current_time: float, is_typing: bool) -> None:
         """Handle user activity in the ecosystem.
@@ -664,7 +697,7 @@ class EcosystemManager:
     def _remove_critter(self, ecosystem: Ecosystem, user_id: int) -> None:
         if user_id in self.user_frogs:
             critter = self.user_frogs.pop(user_id)
-            ecosystem.critters.remove(critter)
+            ecosystem.critters.discard(critter)
         self.last_activity.pop(user_id, None)
 
     def get_latest_gif(self) -> tuple[bytes, float] | None:
@@ -678,3 +711,29 @@ class EcosystemManager:
         if not self.gif_queue.empty():
             return self.gif_queue.get()
         return None
+
+    def _spawn_initial_critters(self, ecosystem: Ecosystem) -> None:
+        num_critters = random.randint(5, 15)  # Spawn between 5 and 15 critters
+        for _ in range(num_critters):
+            user_id = random.randint(1, 1000000)
+            self.fake_user_ids.append(user_id)
+            self._spawn_new_critter(ecosystem, user_id)
+
+    def _simulate_random_message(self, ecosystem: Ecosystem) -> None:
+        if not self.fake_user_ids:
+            return  # No fake users to simulate messages from
+
+        user_id = random.choice(self.fake_user_ids)
+        content = "Hello, ecosystem!"
+        guild_id = random.randint(1, 1000000)
+        channel_id = random.randint(1, 1000000)
+        user = FakeUser(user_id, f"Simulated User {user_id}")
+        event = DiscordEvent(
+            type="MESSAGE",
+            content=content,
+            timestamp=datetime.now(UTC),
+            guild=SerializableGuild(guild_id, "Simulated Guild", 0),
+            channel=SerializableTextChannel(channel_id, "simulated-channel"),
+            member=SerializableMember(user.id, f"SimulatedUser_{user_id}", user.display_name, []),
+        )
+        self._process_event(ecosystem, event)

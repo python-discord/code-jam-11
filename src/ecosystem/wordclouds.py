@@ -21,7 +21,7 @@ class WordCloudObject:
             height=self.height,
             background_color=None,
             mode="RGBA",
-            color_func=lambda *_: (self.strength, self.strength, self.strength),
+            color_func=lambda *_args, **_kwargs: (self.strength, self.strength, self.strength),
         ).generate(words)
 
         wordcloud_image = self.wordcloud.to_image()
@@ -31,7 +31,6 @@ class WordCloudObject:
     def change_words(self, new_words: str) -> None:
         """Change the words in the word cloud."""
         self.words = new_words
-        self.generate_wordcloud(self.surface, self.words)
 
     def draw(self, surface: pygame.Surface) -> None:
         """Draw the word cloud on the given surface using blend mode."""
