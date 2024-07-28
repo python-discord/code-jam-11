@@ -1,3 +1,5 @@
+import io
+import logging
 from abc import ABC, abstractmethod
 
 import pygame
@@ -10,7 +12,9 @@ class Critter(ABC):
     and required methods for updating, drawing, and lifecycle management.
     """
 
-    def __init__(self, member_id: int, x: float, y: float, width: int, height: int) -> None:
+    def __init__(
+        self, member_id: int, x: float, y: float, width: int, height: int, avatar: bytes | None = None
+    ) -> None:
         """Initialize a new Critter instance.
 
         Args:
@@ -20,6 +24,7 @@ class Critter(ABC):
             y (float): Initial y-coordinate of the critter.
             width (int): Width of the ecosystem area.
             height (int): Height of the ecosystem area.
+            avatar (bytes | None): The avatar image data for the critter, if available.
 
         """
         self.member_id = member_id
@@ -28,6 +33,18 @@ class Critter(ABC):
         self.width = width
         self.height = height
         self.alive = True
+
+        self.avatar = avatar
+        self.avatar_surface = None
+        if self.avatar:
+            try:
+                avatar_io = io.BytesIO(self.avatar)
+                avatar_image = pygame.image.load(avatar_io)
+                self.avatar_surface = pygame.transform.scale(avatar_image, (64, 64)).convert_alpha()
+            except pygame.error as e:
+                print(f"Failed to create avatar surface for critter {member_id}: {e}")
+            except Exception:
+                logging.exception("Unexpected error creating avatar surface for snake %s", member_id)
 
     @abstractmethod
     def activate(self) -> None:

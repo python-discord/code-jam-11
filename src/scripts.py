@@ -8,6 +8,7 @@ running different versions of the application.
 import os
 import signal
 import subprocess
+import sys
 from contextlib import suppress
 from pathlib import Path
 
@@ -27,10 +28,16 @@ def run_command(command: list[str]) -> None:
     try:
         process.communicate()
     except KeyboardInterrupt:
-        os.kill(process.pid, signal.SIGINT)
+        if sys.platform == "win32":
+            process.send_signal(signal.CTRL_C_EVENT)
+        else:
+            process.send_signal(signal.SIGINT)
     finally:
         with suppress(ProcessLookupError):
-            os.kill(process.pid, signal.SIGTERM)
+            process.terminate()
+            process.wait(timeout=5)
+            if process.poll() is None:
+                process.kill()
 
 
 def lint() -> None:
