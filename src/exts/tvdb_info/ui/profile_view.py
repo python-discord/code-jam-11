@@ -1,18 +1,18 @@
 import textwrap
-from typing import TYPE_CHECKING, final
+from itertools import chain, groupby
+from typing import final
 
 import discord
 
 from src.bot import Bot
-from src.db_adapters import refresh_list_items, user_get_list_safe, user_get_safe
-from src.db_tables.user_list import UserList, UserListItem, UserListItemKind
+from src.db_adapters import refresh_list_items
+from src.db_tables.media import Episode as EpisodeTable, Movie as MovieTable, Series as SeriesTable
+from src.db_tables.user_list import UserList, UserListItemKind
 from src.settings import MOVIE_EMOJI, SERIES_EMOJI
 from src.tvdb import Movie, Series
-from src.tvdb.client import Episode, FetchMeta, TvdbClient
+from src.tvdb.client import FetchMeta, TvdbClient
+from src.utils.iterators import get_first
 from src.utils.log import get_logger
-
-if TYPE_CHECKING:
-    from src.db_tables.user import User
 
 log = get_logger(__name__)
 
@@ -21,22 +21,136 @@ log = get_logger(__name__)
 class ProfileView(discord.ui.View):
     """View for displaying user profiles with data about the user's added shows."""
 
-    def __init__(self, bot: Bot, tvdb_client: TvdbClient, user: discord.User) -> None:
-        super().__init__(timeout=None)
+    fetched_favorite_movies: list[Movie]
+    fetched_favorite_shows: list[Series]
+    fetched_watched_movies: list[Movie]
+    fetched_watched_shows: list[Series]
+    fetched_partially_watched_shows: list[Series]
+    episodes_total: int
+
+    def __init__(
+        self,
+        *,
+        bot: Bot,
+        tvdb_client: TvdbClient,
+        user: discord.User,
+        watched_list: UserList,
+        favorite_list: UserList,
+    ) -> None:
+        super().__init__()
         self.bot = bot
         self.tvdb_client = tvdb_client
         self.discord_user = user
-        self.user: User
-        self.watched_list: UserList
-        self.favorite_list: UserList
+        self.watched_list = watched_list
+        self.favorite_list = favorite_list
 
-        self.watched_items: list[Episode | Series | Movie]
-        self.favorite_items: list[Episode | Series | Movie]
-        self.fetched_series: dict[int, Series] = {}
-        self.watched_episodes: set[UserListItem] = set()
-        self.watched_episodes_ids: set[int] = set()
+    async def _initialize(self) -> None:
+        """Initialize the view, obtaining any necessary state."""
+        await refresh_list_items(self.bot.db_session, self.watched_list)
+        await refresh_list_items(self.bot.db_session, self.favorite_list)
 
-    async def _get_embed(self) -> discord.Embed:
+        watched_movies: list[MovieTable] = []
+        watched_shows: list[SeriesTable] = []
+        partially_watched_shows: list[SeriesTable] = []
+        watched_episodes: list[EpisodeTable] = []
+
+        for item in self.watched_list.items:
+            match item.kind:
+                case UserListItemKind.MOVIE:
+                    await self.bot.db_session.refresh(item, ["movie"])
+                    watched_movies.append(item.movie)
+                case UserListItemKind.SERIES:
+                    await self.bot.db_session.refresh(item, ["series"])
+                    watched_shows.append(item.series)
+                case UserListItemKind.EPISODE:
+                    await self.bot.db_session.refresh(item, ["episode"])
+                    watched_episodes.append(item.episode)
+
+        # We don't actually care about episodes in the profile view, however, we need them
+        # because of the way shows are marked as watched (last episode watched -> show watched).
+
+        for series_id, episodes in groupby(watched_episodes, key=lambda x: x.series_id):
+            series = await Series.fetch(series_id, client=self.tvdb_client, extended=True, meta=FetchMeta.EPISODES)
+            if series.episodes is None:
+                raise ValueError("Found an episode in watched list for a series with no episodes")
+
+            last_episode = series.episodes[-1]
+            if last_episode.id is None:
+                raise ValueError("Episode has no ID")
+
+            episodes_it = iter(episodes)
+            first_db_episode = get_first(episodes_it)
+            if first_db_episode is None:
+                raise ValueError("No episodes found in a group (never)")
+
+            group_episode_ids = {episode.tvdb_id for episode in episodes_it}
+            group_episode_ids.add(first_db_episode.tvdb_id)
+            await self.bot.db_session.refresh(first_db_episode, ["series"])
+
+            # TODO: This should not be happening, yet it is... It means that there is an episode which
+            # doesn't have a corresponding series, even though it has a foreign key to it that's not
+            # empty, it's almost like the Series got deleted or something.
+            if first_db_episode.series is None:  # pyright: ignore[reportUnnecessaryComparison]
+                manual = await self.bot.db_session.get(SeriesTable, first_db_episode.series_id)
+                raise ValueError(f"DB series is None id={first_db_episode.series_id}, manual={manual}")
+
+            if last_episode.id in group_episode_ids:
+                watched_shows.append(first_db_episode.series)
+            else:
+                partially_watched_shows.append(first_db_episode.series)
+
+        favorite_movies: list[MovieTable] = []
+        favorite_shows: list[SeriesTable] = []
+
+        for item in self.favorite_list.items:
+            match item.kind:
+                case UserListItemKind.MOVIE:
+                    await self.bot.db_session.refresh(item, ["movie"])
+                    favorite_movies.append(item.movie)
+                case UserListItemKind.SERIES:
+                    await self.bot.db_session.refresh(item, ["series"])
+                    favorite_shows.append(item.series)
+                case UserListItemKind.EPISODE:
+                    raise TypeError("Found an episode in favorite list")
+
+        # Fetch the data about all favorite & watched items from tvdb
+        # TODO: This is a lot of API calls, we should probably limit this to some maximum
+        self.fetched_favorite_movies = [
+            await Movie.fetch(media_db_data.tvdb_id, client=self.tvdb_client) for media_db_data in favorite_movies
+        ]
+        self.fetched_favorite_shows = [
+            await Series.fetch(
+                media_db_data.tvdb_id, client=self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS
+            )
+            for media_db_data in favorite_movies
+        ]
+        self.fetched_watched_movies = [
+            await Movie.fetch(media_db_data.tvdb_id, client=self.tvdb_client) for media_db_data in watched_movies
+        ]
+        self.fetched_watched_shows = [
+            await Series.fetch(
+                media_db_data.tvdb_id,
+                client=self.tvdb_client,
+                extended=True,
+                meta=FetchMeta.TRANSLATIONS,
+            )
+            for media_db_data in watched_shows
+        ]
+        self.fetched_partially_watched_shows = [
+            await Series.fetch(
+                media_db_data.tvdb_id,
+                client=self.tvdb_client,
+                extended=True,
+                meta=FetchMeta.TRANSLATIONS,
+            )
+            for media_db_data in partially_watched_shows
+        ]
+
+        # Instead of fetching all episodes, just store the total number of episodes that the user has added
+        # as that's the only thing we need here and while it is a bit inconsistent, it's a LOT more efficient.
+        self.episodes_total = len(watched_episodes)
+
+    def _get_embed(self) -> discord.Embed:
         embed = discord.Embed(
             title="Profile",
             description=f"Profile for {self.discord_user.mention}",
@@ -44,21 +158,14 @@ class ProfileView(discord.ui.View):
             thumbnail=self.discord_user.display_avatar.url,
         )
 
-        total_movies = len([item for item in self.watched_items if isinstance(item, Movie)])
-        total_series = len(self.fetched_series)
-        total_episodes = len([item for item in self.watched_items if isinstance(item, Episode)])
         stats_str = textwrap.dedent(
             f"""
-            **Total Shows:** {total_series} ({total_episodes} episode{'s' if total_episodes > 0 else ''})
-            **Total Movies:** {total_movies}
+            **Total Shows:** {len(self.fetched_favorite_shows)} \
+            ({self.episodes_total} episode{'s' if self.episodes_total > 0 else ''})
+            **Total Movies:** {len(self.fetched_watched_movies)}
             """
         )
         embed.add_field(name="Stats", value=stats_str, inline=False)
-
-        # TODO: This currently skips showing episodes, however, the entire system of series
-        # getting marked as watched should be reworked to use the latest episode in the series
-        # which will then need to be handled here. Currently, since a series can be marked
-        # as watched regardless of the status of its episodes, just use the series.
 
         # TODO: What if there's too many things here, we might need to paginate this.
 
@@ -66,70 +173,24 @@ class ProfileView(discord.ui.View):
             name="Favorites",
             value="\n".join(
                 f"{MOVIE_EMOJI if isinstance(item, Movie) else SERIES_EMOJI} {item.bilingual_name}"
-                for item in self.favorite_items
-                if not isinstance(item, Episode)
+                for item in chain(self.fetched_favorite_shows, self.fetched_favorite_movies)
             ),
         )
-        watched_str: str = ""
-        for item in self.watched_items:
-            if isinstance(item, Movie):
-                watched_str += f"{MOVIE_EMOJI} {item.bilingual_name}\n"
-        for series in self.fetched_series.values():
-            if not series.episodes:
-                continue
-            for i, episode in enumerate(reversed(series.episodes)):
-                if episode.id in self.watched_episodes_ids:
-                    watched_str += (
-                        f"{SERIES_EMOJI} {series.bilingual_name} - {episode.formatted_name if i != 0 else 'entirely'}"
-                    )
+        watched_items: list[str] = []
+        for item in self.fetched_watched_movies:
+            watched_items.append(f"{MOVIE_EMOJI} {item.bilingual_name}")  # noqa: PERF401
+        for item in self.fetched_watched_shows:
+            watched_items.append(f"{SERIES_EMOJI} {item.bilingual_name}")  # noqa: PERF401
+        for item in self.fetched_partially_watched_shows:
+            watched_items.append(f"{SERIES_EMOJI} {item.bilingual_name} partially")  # noqa: PERF401
 
         embed.add_field(
             name="Watched",
-            value=watched_str,
+            value="\n".join(watched_items),
         )
         return embed
 
-    async def _fetch_media(self, item: UserListItem) -> Episode | Series | Movie:
-        """Fetch given user list item from database."""
-        match item.kind:
-            case UserListItemKind.EPISODE:
-                return await Episode.fetch(item.tvdb_id, client=self.tvdb_client)
-            case UserListItemKind.MOVIE:
-                return await Movie.fetch(item.tvdb_id, client=self.tvdb_client)
-            case UserListItemKind.SERIES:
-                return await Series.fetch(item.tvdb_id, client=self.tvdb_client)
-
-    async def _update_states(self) -> None:
-        if not hasattr(self, "user"):
-            self.user = await user_get_safe(self.bot.db_session, self.discord_user.id)
-
-        # TODO: Currently, this will result in a lot of API calls and we really just need
-        # the names of the items. We should consider storing those in the database directly.
-        # (note: what if the name changes? can that even happen?)
-
-        if not hasattr(self, "watched_items"):
-            self.watched_list = await user_get_list_safe(self.bot.db_session, self.user, "watched")
-        await refresh_list_items(self.bot.db_session, self.watched_list)
-        self.watched_items = [
-            await self._fetch_media(item) for item in self.watched_list.items if item.kind != UserListItemKind.EPISODE
-        ]
-        self.watched_episodes = {item for item in self.watched_list.items if item.kind == UserListItemKind.EPISODE}
-        self.watched_episodes_ids = {item.tvdb_id for item in self.watched_episodes}
-        for episode in self.watched_episodes:
-            await self.bot.db_session.refresh(episode, ["episode"])
-            if not self.fetched_series.get(episode.episode.series_id):
-                series = await Series.fetch(
-                    episode.episode.series_id, client=self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS
-                )
-                await series.fetch_episodes()
-                self.fetched_series[episode.episode.series_id] = series
-
-        if not hasattr(self, "favorite_list"):
-            self.favorite_list = await user_get_list_safe(self.bot.db_session, self.user, "favorite")
-        await refresh_list_items(self.bot.db_session, self.favorite_list)
-        self.favorite_items = [await self._fetch_media(item) for item in self.favorite_list.items]
-
     async def send(self, interaction: discord.Interaction) -> None:
         """Send the view."""
-        await self._update_states()
-        await interaction.respond(embed=await self._get_embed(), view=self)
+        await self._initialize()
+        await interaction.respond(embed=self._get_embed(), view=self)

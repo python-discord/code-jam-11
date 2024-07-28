@@ -3,6 +3,7 @@ from typing import Literal, cast
 from discord import ApplicationContext, Cog, Member, User, option, slash_command
 
 from src.bot import Bot
+from src.db_adapters.user import user_get_list_safe, user_get_safe
 from src.tvdb import FetchMeta, Movie, Series, TvdbClient
 from src.tvdb.errors import InvalidIdError
 from src.utils.log import get_logger
@@ -40,7 +41,14 @@ class InfoCog(Cog):
         # they are friends with the user, or it's their own profile)
         # https://github.com/ItsDrike/code-jam-2024/issues/51
 
-        view = ProfileView(self.bot, self.tvdb_client, user)
+        db_user = await user_get_safe(self.bot.db_session, user.id)
+        view = ProfileView(
+            bot=self.bot,
+            tvdb_client=self.tvdb_client,
+            user=user,
+            watched_list=await user_get_list_safe(self.bot.db_session, db_user, "watched"),
+            favorite_list=await user_get_list_safe(self.bot.db_session, db_user, "favorite"),
+        )
         await view.send(ctx.interaction)
 
     @slash_command()
