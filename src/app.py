@@ -32,7 +32,7 @@ async def run_discord_bot(test_mode: bool = True) -> None:
         raise
     finally:
         print("Cleaning up...")
-        await client.stop_ecosystems()
+        await client.stop_all_ecosystems()
         await client.close()
         await loop.shutdown_asyncgens()
 

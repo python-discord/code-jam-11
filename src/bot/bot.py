@@ -215,6 +215,14 @@ class EcoCordClient(discord.Client):
             if ecosystem_manager:
                 ecosystem_manager.stop()
 
+    async def stop_all_ecosystems(self) -> None:
+        """Stop all ecosystem managers for all guilds."""
+        for guild_data in self.guilds_data.values():
+            ecosystem_managers = guild_data.get("ecosystem_managers", {})
+            for ecosystem_manager in ecosystem_managers.values():
+                ecosystem_manager.stop()
+            guild_data["ecosystem_managers"] = {}
+
     async def reconfigure_channels(self, guild_id: int, new_channels: list[discord.TextChannel]) -> None:
         """Reconfigure the bot to run in the specified channels."""
         guild_data = self.guilds_data.get(guild_id)

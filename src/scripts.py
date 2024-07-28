@@ -33,14 +33,10 @@ def run_command(command: list[str]) -> None:
             os.kill(process.pid, signal.SIGTERM)
 
 
-def format() -> None:
-    """Run the 'ruff format' command using Poetry."""
-    run_command(["poetry", "run", "ruff", "format"])
-
-
 def lint() -> None:
-    """Run the 'ruff check' command using Poetry."""
+    """Run the 'ruff check' and 'ruff format' command using Poetry."""
     run_command(["poetry", "run", "ruff", "check"])
+    run_command(["poetry", "run", "ruff", "format"])
 
 
 def run() -> None:

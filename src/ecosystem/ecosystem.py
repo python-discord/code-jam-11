@@ -23,6 +23,7 @@ from .bird import Bird
 from .cloud_manager import CloudManager
 from .frog import Frog
 from .snake import Snake
+from .wordclouds import WordCloudObject
 
 
 class Ecosystem:
@@ -100,6 +101,18 @@ class Ecosystem:
             self.gif_process.start()
 
         self.cloud_manager = CloudManager(self.width, self.height)
+        self.word_cloud = WordCloudObject(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod "
+            "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, "
+            "quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo "
+            "consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse "
+            "cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat "
+            "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+            self.width,
+            self.height,
+            5,
+        )
+
         atexit.register(self.cleanup)
 
     def setup_ui(self) -> None:
@@ -201,6 +214,8 @@ class Ecosystem:
         for critter in self.critters:
             critter.draw(self.surface)
 
+        self.word_cloud.draw(self.surface)
+
         return self.surface
 
     def post_update(self) -> None:
@@ -294,7 +309,6 @@ class Ecosystem:
 
     def cleanup(self) -> None:
         """Clean up resources used by the ecosystem."""
-        print("Cleaning up Ecosystem...")
         if pygame.get_init():
             pygame.quit()
         if hasattr(self, "gif_process"):
@@ -412,8 +426,8 @@ class EcosystemManager:
         self.running = False
 
         if not self.interactive:
-            self.user_frogs = {}  # Dictionary to store user frogs
-            self.last_activity = {}  # Dictionary to store last activity time for each user
+            self.user_frogs = {}
+            self.last_activity = {}
 
     def start(self, show_controls: bool = True) -> None:
         """Start the ecosystem simulation.
@@ -451,7 +465,6 @@ class EcosystemManager:
             screen = pygame.display.set_mode((self.width, self.height))
             pygame.display.set_caption(f"Ecosystem Visualization {multiprocessing.current_process().name}")
         else:
-            # Create a hidden surface for rendering
             pygame.display.set_mode((1, 1), pygame.HIDDEN)
             screen = pygame.Surface((self.width, self.height))
 
@@ -486,7 +499,6 @@ class EcosystemManager:
                 gif_data, timestamp = ecosystem.gif_info_queue.get()
                 self.gif_queue.put((gif_data, timestamp))
 
-            # Check for commands from the main process
             while not self.command_queue.empty():
                 command, args = self.command_queue.get()
                 if command == "stop":
