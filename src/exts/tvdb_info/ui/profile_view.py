@@ -8,6 +8,7 @@ from src.bot import Bot
 from src.db_adapters import refresh_list_items
 from src.db_tables.media import Episode as EpisodeTable, Movie as MovieTable, Series as SeriesTable
 from src.db_tables.user_list import UserList, UserListItemKind
+from src.exts.error_handler.view import ErrorHandledView
 from src.settings import MOVIE_EMOJI, SERIES_EMOJI
 from src.tvdb import Movie, Series
 from src.tvdb.client import FetchMeta, TvdbClient
@@ -18,7 +19,7 @@ log = get_logger(__name__)
 
 
 @final
-class ProfileView(discord.ui.View):
+class ProfileView(ErrorHandledView):
     """View for displaying user profiles with data about the user's added shows."""
 
     fetched_favorite_movies: list[Movie]

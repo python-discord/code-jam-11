@@ -5,11 +5,12 @@ import discord
 
 from src.bot import Bot
 from src.db_tables.user_list import UserList
+from src.exts.error_handler.view import ErrorHandledView
 
 from ._reactive_buttons import ReactiveButton, ReactiveButtonStateStyle
 
 
-class MediaView(discord.ui.View, ABC):
+class MediaView(ErrorHandledView, ABC):
     """Base class for views that display info about some media (movie/series/episode)."""
 
     def __init__(self, *, bot: Bot, user_id: int, watched_list: UserList, favorite_list: UserList) -> None:

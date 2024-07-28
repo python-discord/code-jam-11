@@ -1,13 +1,16 @@
-import textwrap
+import sys
+from itertools import chain
 from typing import cast
 
-from discord import Any, ApplicationContext, Cog, Colour, Embed, EmbedField, EmbedFooter, errors
+from discord import Any, ApplicationContext, Cog, EmbedField, EmbedFooter, errors
 from discord.ext.commands import errors as commands_errors
 
 from src.bot import Bot
-from src.settings import FAIL_EMOJI, GITHUB_REPO
+from src.settings import FAIL_EMOJI
 from src.utils.log import get_logger
 from src.utils.ratelimit import RateLimitExceededError
+
+from .utils import build_error_embed, build_unhandled_application_embed
 
 log = get_logger(__name__)
 
@@ -17,51 +20,6 @@ class ErrorHandler(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-
-    async def send_error_embed(
-        self,
-        ctx: ApplicationContext,
-        *,
-        title: str | None = None,
-        description: str | None = None,
-        fields: list[EmbedField] | None = None,
-        footer: EmbedFooter | None = None,
-    ) -> None:
-        """Send an embed regarding the unhandled exception that occurred."""
-        if title is None and description is None:
-            raise ValueError("You need to provide either a title or a description.")
-
-        embed = Embed(
-            title=title,
-            description=description,
-            color=Colour.red(),
-            fields=fields,
-            footer=footer,
-        )
-        await ctx.respond(f"Sorry, {ctx.author.mention}", embed=embed)
-
-    async def send_unhandled_embed(self, ctx: ApplicationContext, exc: BaseException) -> None:
-        """Send an embed regarding the unhandled exception that occurred."""
-        msg = f"Exception {exc!r} has occurred from command {ctx.command.qualified_name} invoked by {ctx.author.id}"
-        if ctx.message:
-            msg += f" in message {ctx.message.content!r}"
-        if ctx.guild:
-            msg += f" on guild {ctx.guild.id}"
-        log.warning(msg)
-
-        await self.send_error_embed(
-            ctx,
-            title="Unhandled exception",
-            description=textwrap.dedent(
-                f"""
-                Unknown error has occurred without being properly handled.
-                Please report this at the [GitHub repository]({GITHUB_REPO})
-
-                **Command**: `{ctx.command.qualified_name}`
-                **Exception details**: ```{exc.__class__.__name__}: {exc}```
-                """
-            ),
-        )
 
     async def _handle_check_failure(
         self,
@@ -87,13 +45,9 @@ class ErrorHandler(Cog):
                 raise ValueError("Never (hopefully), here's some random code: 0xd1ff0aaac")
 
         if isinstance(exc, commands_errors.NotOwner):
-            await self.send_error_embed(
-                ctx,
-                description=f"{FAIL_EMOJI} This command is limited to the bot owner.",
-            )
-            return
+            embed = build_error_embed(description=f"{FAIL_EMOJI} This command is limited to the bot owner.")
 
-        if isinstance(
+        elif isinstance(
             exc,
             (
                 commands_errors.MissingPermissions,
@@ -101,13 +55,9 @@ class ErrorHandler(Cog):
                 commands_errors.MissingAnyRole,
             ),
         ):
-            await self.send_error_embed(
-                ctx,
-                description=f"{FAIL_EMOJI} You don't have permission to run this command.",
-            )
-            return
+            embed = build_error_embed(description=f"{FAIL_EMOJI} You don't have permission to run this command.")
 
-        if isinstance(
+        elif isinstance(
             exc,
             (
                 commands_errors.BotMissingRole,
@@ -115,27 +65,22 @@ class ErrorHandler(Cog):
                 commands_errors.BotMissingPermissions,
             ),
         ):
-            await self.send_error_embed(
-                ctx,
-                description=f"{FAIL_EMOJI} I don't have the necessary permissions to perform this action.",
+            embed = build_error_embed(
+                description=f"{FAIL_EMOJI} I don't have the necessary permissions to perform this action."
             )
 
-        if isinstance(exc, commands_errors.NoPrivateMessage):
-            await self.send_error_embed(ctx, description=f"{FAIL_EMOJI} This command can only be used in a server.")
-            return
+        elif isinstance(exc, commands_errors.NoPrivateMessage):
+            embed = build_error_embed(description=f"{FAIL_EMOJI} This command can only be used in a server.")
 
-        if isinstance(exc, commands_errors.PrivateMessageOnly):
-            await self.send_error_embed(ctx, description=f"{FAIL_EMOJI} This command can only be used in a DM.")
-            return
+        elif isinstance(exc, commands_errors.PrivateMessageOnly):
+            embed = build_error_embed(description=f"{FAIL_EMOJI} This command can only be used in a DM.")
 
-        if isinstance(exc, commands_errors.NSFWChannelRequired):
-            await self.send_error_embed(
-                ctx,
-                description=f"{FAIL_EMOJI} This command can only be used in an NSFW channel.",
-            )
-            return
+        elif isinstance(exc, commands_errors.NSFWChannelRequired):
+            embed = build_error_embed(description=f"{FAIL_EMOJI} This command can only be used in an NSFW channel.")
+        else:
+            embed = build_unhandled_application_embed(ctx, exc)
 
-        await self.send_unhandled_embed(ctx, exc)
+        await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
 
     async def _handle_command_invoke_error(
         self,
@@ -145,11 +90,10 @@ class ErrorHandler(Cog):
         original_exception = exc.__cause__
 
         if original_exception is None:
-            await self.send_unhandled_embed(ctx, exc)
+            embed = build_unhandled_application_embed(ctx, exc)
             log.exception("Got ApplicationCommandInvokeError without a cause.", exc_info=exc)
-            return
 
-        if isinstance(original_exception, RateLimitExceededError):
+        elif isinstance(original_exception, RateLimitExceededError):
             msg = original_exception.msg or "Hit a rate-limit, please try again later."
             time_remaining = f"Expected reset: <t:{round(original_exception.closest_expiration)}:R>"
             footer = None
@@ -157,17 +101,17 @@ class ErrorHandler(Cog):
                 footer = EmbedFooter(
                     text="Spamming the command will only increase the time you have to wait.",
                 )
-            await self.send_error_embed(
-                ctx,
+            embed = build_error_embed(
                 title="Rate limit exceeded",
                 description=f"{FAIL_EMOJI} {msg}",
                 fields=[EmbedField(name="", value=time_remaining)],
                 footer=footer,
             )
-            return
+        else:
+            embed = build_unhandled_application_embed(ctx, original_exception)
+            log.exception("Unhandled exception occurred.", exc_info=original_exception)
 
-        await self.send_unhandled_embed(ctx, original_exception)
-        log.exception("Unhandled exception occurred.", exc_info=original_exception)
+        await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
 
     @Cog.listener()
     async def on_application_command_error(self, ctx: ApplicationContext, exc: errors.DiscordException) -> None:
@@ -180,7 +124,28 @@ class ErrorHandler(Cog):
             await self._handle_command_invoke_error(ctx, exc)
             return
 
-        await self.send_unhandled_embed(ctx, exc)
+        embed = build_unhandled_application_embed(ctx, exc)
+        await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
+
+    @Cog.listener()
+    async def on_error(self, event_method: str, *args: object, **kwargs: object) -> None:
+        """Handle exception that have occurred in any event.
+
+        This is a catch-all for errors that aren't handled by any other listeners, or fell through (were re-raised).
+        """
+        log.exception(f"Unhandled excepton occurred {event_method=} {args=!r} {kwargs=!r}", exc_info=True)
+
+        exc = sys.exc_info()[1]
+        if exc is None:
+            return
+
+        for arg in chain(args, kwargs.values()):
+            if isinstance(arg, ApplicationContext):
+                ctx = arg
+
+                embed = build_unhandled_application_embed(ctx, exc)
+                await ctx.send(f"Sorry {ctx.author.mention}", embed=embed)
+                return
 
 
 def setup(bot: Bot) -> None:
