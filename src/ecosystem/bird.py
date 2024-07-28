@@ -25,7 +25,8 @@ class Bird(Critter):
             height (int): The height of the simulation area.
 
         """
-        super().__init__(member_id, random.randint(0, width), random.randint(0, int(height * 0.7)), width, height)
+        self.max_height = height * 0.6
+        super().__init__(member_id, random.randint(0, width), random.randint(0, int(self.max_height)), width, height)
         self.position = Vector2(self.x, self.y)
         self.velocity = Vector2(random.uniform(-1, 1), random.uniform(-1, 1)).normalize() * 2
         self.size = random.uniform(15, 25)
@@ -33,6 +34,8 @@ class Bird(Critter):
         self.wing_angle = 0
         self.wing_speed = random.uniform(10, 15)
         self.turn_chance = 0.02
+        self.target_angle = 0
+        self.turn_speed = random.uniform(0.5, 1.5)
 
     def generate_color(self) -> tuple[int, int, int]:
         """Generate a random color for the bird.
@@ -65,12 +68,24 @@ class Bird(Critter):
         """
         self.position += self.velocity * activity * delta * 60
 
-        self.position.x = self.position.x % self.width
-        self.position.y = max(0, min(self.position.y, self.height * 0.7))
+        if self.position.x < 0 or self.position.x > self.width:
+            self.velocity.x *= -1
+        if self.position.y < 0 or self.position.y > self.max_height:
+            self.velocity.y *= -1
+
+        self.position.x = max(0, min(self.position.x, self.width))
+        self.position.y = max(0, min(self.position.y, self.max_height))
 
         if random.random() < self.turn_chance:
-            angle = random.uniform(-math.pi / 4, math.pi / 4)
-            self.velocity.rotate_ip(math.degrees(angle))
+            self.target_angle = random.uniform(-math.pi / 4, math.pi / 4)
+
+        if abs(self.target_angle) > 0.01:
+            turn_amount = self.turn_speed * delta
+            turn_direction = 1 if self.target_angle > 0 else -1
+            actual_turn = min(abs(self.target_angle), turn_amount) * turn_direction
+
+            self.velocity.rotate_ip(math.degrees(actual_turn))
+            self.target_angle -= actual_turn
 
         self.wing_angle = math.sin(pygame.time.get_ticks() * self.wing_speed * 0.001) * 45
 
@@ -111,9 +126,9 @@ class Bird(Critter):
         )
 
     def spawn(self) -> None:
-        """Respawn the bird at a random position in the simulation area."""
+        """Respawn the bird at a random position in the top portion of the simulation area."""
         self.alive = True
-        self.position = Vector2(random.randint(0, self.width), random.randint(0, int(self.height * 0.7)))
+        self.position = Vector2(random.randint(0, self.width), random.randint(0, int(self.max_height)))
         self.x, self.y = self.position.x, self.position.y
 
     def despawn(self) -> None:

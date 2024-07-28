@@ -86,7 +86,13 @@ class Frog(Critter):
         self.state_time = 0
         self.jump_start_y = self.y
         jump_distance = random.uniform(50, 150)
-        self.jump_target_x = max(0, min(self.width, self.x + random.uniform(-jump_distance, jump_distance)))
+
+        new_x = self.x + random.uniform(-jump_distance, jump_distance)
+
+        self.jump_target_x = max(self.size / 2, min(self.width - self.size / 2, new_x))
+        new_x = self.x + random.uniform(-jump_distance, jump_distance)
+
+        self.jump_target_x = max(self.size / 2, min(self.width - self.size / 2, new_x))
 
     def draw(self, surface: pygame.Surface) -> None:
         """Draw the frog on the given surface.

@@ -27,6 +27,8 @@ class Snake(Critter):
         super().__init__(member_id, x, y, width, height)
         self.segments = [Vector2(x, y)]
         self.direction = Vector2(1, 0)
+        self.min_y = int(self.height * 0.65)
+        self.max_y = int(self.height * 0.80)
         self.speed = 2
         self.length = 50
         self.color = self.generate_color()
@@ -52,7 +54,7 @@ class Snake(Critter):
             Vector2: A new target position within the game area.
 
         """
-        return Vector2(random.randint(0, self.width), random.randint(int(self.height * 0.7), self.height))
+        return Vector2(random.randint(0, self.width), random.randint(self.min_y, self.max_y))
 
     def update(self, delta: float, activity: float) -> None:
         """Update the snake's position and state.
@@ -85,6 +87,8 @@ class Snake(Critter):
         to_target = self.target - head
         self.direction = to_target.normalize()
         new_head = head + self.direction * self.speed * activity * delta * 60
+
+        new_head.y = max(min(new_head.y, self.max_y), self.min_y)
 
         self.segments.insert(0, new_head)
         if len(self.segments) > self.length:
@@ -126,7 +130,7 @@ class Snake(Critter):
     def spawn(self) -> None:
         self.alive = True
         self.activate()
-        self.segments = [Vector2(random.randint(0, self.width), self.height)]
+        self.segments = [Vector2(random.randint(0, self.width), random.randint(self.min_y, self.max_y))]
         self.color = self.generate_color()
 
     def despawn(self) -> None:

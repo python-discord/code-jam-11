@@ -213,7 +213,7 @@ class Ecosystem:
         self.cloud_manager.draw(self.surface)
 
         ground_color = self.interpolate_color(self.ground_colors[0], self.ground_colors[1], self.activity)
-        ground_height = int(self.height * 0.3)
+        ground_height = int(self.height * 0.35)
 
         # Create gradient for ground
         gradient_surface = pygame.Surface((self.width, ground_height))
@@ -224,13 +224,13 @@ class Ecosystem:
 
         self.surface.blit(gradient_surface, (0, self.height - ground_height))
 
+        for bubble in self.speech_bubbles:
+            bubble.draw(self.surface)
+
         for critter in self.critters:
             critter.draw(self.surface)
 
         self.word_cloud.draw(self.surface)
-
-        for bubble in self.speech_bubbles:
-            bubble.draw(self.surface)
 
         return self.surface
 

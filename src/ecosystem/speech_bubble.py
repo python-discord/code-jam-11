@@ -63,57 +63,34 @@ class SpeechBubble:
         max_width = max(surface.get_width() for surface in text_surfaces)
         total_height = sum(surface.get_height() for surface in text_surfaces)
 
-        self.surface = pygame.Surface(
-            (max_width + 2 * self.padding, total_height + 2 * self.padding + 20), pygame.SRCALPHA
+        self.bubble_body = pygame.Surface(
+            (max_width + 2 * self.padding, total_height + 2 * self.padding), pygame.SRCALPHA
         )
-
-        background = pygame.Surface((max_width + 2 * self.padding, total_height + 2 * self.padding), pygame.SRCALPHA)
-        background.fill((*self.bg_color, self.opacity))
-        self.surface.blit(background, (0, 0))
-
         pygame.draw.rect(
-            self.surface,
-            self.border_color,
-            (0, 0, max_width + 2 * self.padding, total_height + 2 * self.padding),
-            width=2,
+            self.bubble_body,
+            (*self.bg_color, self.opacity),
+            self.bubble_body.get_rect(),
             border_radius=self.border_radius,
         )
 
         y_offset = self.padding
         for surface in text_surfaces:
-            self.surface.blit(surface, (self.padding, y_offset))
+            self.bubble_body.blit(surface, (self.padding, y_offset))
             y_offset += surface.get_height()
 
-        self.tail_offset = 0
+        self._draw_bubble()
 
-        self._draw_tail()
+    def _draw_bubble(self) -> None:
+        bubble_width, bubble_height = self.bubble_body.get_size()
 
-    def _draw_tail(self) -> None:
-        tail_points = [
-            (
-                self.surface.get_width() // 2 + self.tail_offset - 40 // 2,
-                self.surface.get_height() - 20,
-            ),
-            (self.surface.get_width() // 2 + self.tail_offset, self.surface.get_height()),
-            (
-                self.surface.get_width() // 2 + self.tail_offset + 40 // 2,
-                self.surface.get_height() - 20,
-            ),
-        ]
+        self.surface = pygame.Surface((bubble_width, bubble_height), pygame.SRCALPHA)
 
-        pygame.draw.rect(
-            self.surface,
-            (*self.bg_color, self.opacity),
-            (0, self.surface.get_height() - 20 - 2, self.surface.get_width(), 20 + 2),
-        )
+        bubble_rect = pygame.Rect(0, 0, bubble_width, bubble_height)
+        pygame.draw.rect(self.surface, (*self.bg_color, self.opacity), bubble_rect, border_radius=self.border_radius)
 
-        pygame.draw.polygon(self.surface, (*self.bg_color, self.opacity), tail_points)
+        pygame.draw.rect(self.surface, self.border_color, bubble_rect, width=2, border_radius=self.border_radius)
 
-        pygame.draw.rect(
-            self.surface, self.border_color, self.surface.get_rect(), width=2, border_radius=self.border_radius
-        )
-
-        pygame.draw.lines(self.surface, self.border_color, False, tail_points, width=2)
+        self.surface.blit(self.bubble_body, (0, 0))
 
     def update(self, delta: float) -> None:
         critter_x, critter_y = self.critter.x, self.critter.y
@@ -127,11 +104,6 @@ class SpeechBubble:
         y = max(0, min(y, screen_height - bubble_height))
 
         self.position = (x, y)
-
-        self.tail_offset = int(critter_x - (x + bubble_width // 2))
-        self.tail_offset = max(-bubble_width // 2 + 20, min(self.tail_offset, bubble_width // 2 - 20))
-
-        self._draw_tail()
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self.surface, self.position)
