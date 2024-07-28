@@ -12,6 +12,8 @@ DB_ALWAYS_MIGRATE = get_config("DB_ALWAYS_MIGRATE", cast=bool, default=False)
 
 FAIL_EMOJI = "❌"
 SUCCESS_EMOJI = "✅"
+MOVIE_EMOJI = "🎬"
+SERIES_EMOJI = "📺"
 GROUP_EMOJI = get_config("GROUP_EMOJI", default=":file_folder:")
 COMMAND_EMOJI = get_config("COMMAND_EMOJI", default=":arrow_forward:")
 
@@ -20,12 +22,7 @@ THETVDB_COPYRIGHT_FOOTER = (
 )
 THETVDB_LOGO = "https://www.thetvdb.com/images/attribution/logo1.png"
 
-# The default rate-limit might be a bit too small for production-ready bots that live
-# on multiple guilds. But it's good enough for our demonstration purposes and it's
-# still actually quite hard to hit this rate-limit on a single guild, unless multiple
-# people actually try to make many requests after each other..
-#
 # Note that tvdb doesn't actually have rate-limits (or at least they aren't documented),
 # but we should still be careful not to spam the API too much and be on the safe side.
-TVDB_RATE_LIMIT_REQUESTS = get_config("TVDB_RATE_LIMIT_REQUESTS", cast=int, default=5)
+TVDB_RATE_LIMIT_REQUESTS = get_config("TVDB_RATE_LIMIT_REQUESTS", cast=int, default=100)
 TVDB_RATE_LIMIT_PERIOD = get_config("TVDB_RATE_LIMIT_PERIOD", cast=float, default=5)  # seconds

@@ -1,14 +1,15 @@
-from typing import Literal
+from typing import Literal, cast
 
-from discord import ApplicationContext, Cog, option, slash_command
+from discord import ApplicationContext, Cog, Member, User, option, slash_command
 
 from src.bot import Bot
+from src.db_adapters.user import user_get_list_safe, user_get_safe
 from src.tvdb import FetchMeta, Movie, Series, TvdbClient
 from src.tvdb.errors import InvalidIdError
 from src.utils.log import get_logger
 from src.utils.ratelimit import rate_limited
 
-from .ui import InfoView
+from .ui import ProfileView, search_view
 
 log = get_logger(__name__)
 
@@ -22,6 +23,33 @@ class InfoCog(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
         self.tvdb_client = TvdbClient(self.bot.http_session, self.bot.cache)
+
+    @slash_command()
+    @option("user", input_type=User, description="The user to show the profile for.", required=False)
+    async def profile(self, ctx: ApplicationContext, *, user: User | Member | None = None) -> None:
+        """Show a user's profile."""
+        await ctx.defer()
+
+        if user is None:
+            user = cast(User | Member, ctx.user)  # for some reason, pyright thinks user can be None here
+
+        # Convert Member to User (Member isn't a subclass of User...)
+        if isinstance(user, Member):
+            user = user._user  # pyright: ignore[reportPrivateUsage]
+
+        # TODO: Friend check (don't allow looking at other people's profiles, unless
+        # they are friends with the user, or it's their own profile)
+        # https://github.com/ItsDrike/code-jam-2024/issues/51
+
+        db_user = await user_get_safe(self.bot.db_session, user.id)
+        view = ProfileView(
+            bot=self.bot,
+            tvdb_client=self.tvdb_client,
+            user=user,
+            watched_list=await user_get_list_safe(self.bot.db_session, db_user, "watched"),
+            favorite_list=await user_get_list_safe(self.bot.db_session, db_user, "favorite"),
+        )
+        await view.send(ctx.interaction)
 
     @slash_command()
     @option("query", input_type=str, description="The query to search for.")
@@ -60,9 +88,11 @@ class InfoCog(Cog):
                             await Movie.fetch(query, self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS)
                         ]
                     case "series":
-                        response = [
-                            await Series.fetch(query, self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS)
-                        ]
+                        series = await Series.fetch(
+                            query, self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS
+                        )
+                        await series.fetch_episodes()
+                        response = [series]
                     case None:
                         await ctx.respond(
                             "You must specify a type (movie or series) when searching by ID.", ephemeral=True
@@ -76,11 +106,15 @@ class InfoCog(Cog):
                 return
         else:
             response = await self.tvdb_client.search(query, limit=5, entity_type=entity_type)
+            for element in response:
+                await element.ensure_translations()
+                if isinstance(element, Series):
+                    await element.fetch_episodes()
             if not response:
                 await ctx.respond("No results found.")
                 return
 
-        view = InfoView(self.bot, ctx.user.id, response)
+        view = await search_view(self.bot, ctx.user.id, response)
         await view.send(ctx.interaction)
 
 

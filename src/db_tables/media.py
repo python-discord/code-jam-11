@@ -8,7 +8,7 @@ want to store something extra that's global to each movie / show / episode.
 """
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.utils.database import Base
 
@@ -28,6 +28,12 @@ class Series(Base):
 
     tvdb_id: Mapped[int] = mapped_column(primary_key=True)
 
+    episodes: Mapped[list["Episode"]] = relationship(
+        lazy="selectin",
+        back_populates="series",
+        cascade="all, delete-orphan",
+    )
+
 
 class Episode(Base):
     """Table to store episodes of series."""
@@ -36,3 +42,5 @@ class Episode(Base):
 
     tvdb_id: Mapped[int] = mapped_column(primary_key=True)
     series_id: Mapped[int] = mapped_column(ForeignKey("series.tvdb_id"))
+
+    series: Mapped[Series] = relationship(lazy="selectin", back_populates="episodes")

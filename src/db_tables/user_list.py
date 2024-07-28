@@ -75,21 +75,21 @@ class UserListItem(Base):
     series: Mapped["Series"] = relationship(
         "Series",
         foreign_keys=[tvdb_id],
-        primaryjoin="and_(UserListItem.tvdb_id == Series.tvdb_id, UserListItem.kind == 'series')",
+        primaryjoin="and_(UserListItem.tvdb_id == Series.tvdb_id, UserListItem.kind == 'SERIES')",
         uselist=False,
         viewonly=True,
     )
     movie: Mapped["Movie"] = relationship(
         "Movie",
         foreign_keys=[tvdb_id],
-        primaryjoin="and_(UserListItem.tvdb_id == Movie.tvdb_id, UserListItem.kind == 'movie')",
+        primaryjoin="and_(UserListItem.tvdb_id == Movie.tvdb_id, UserListItem.kind == 'MOVIE')",
         uselist=False,
         viewonly=True,
     )
     episode: Mapped["Episode"] = relationship(
         "Episode",
         foreign_keys=[tvdb_id],
-        primaryjoin="and_(UserListItem.tvdb_id == Episode.tvdb_id, UserListItem.kind == 'episode')",
+        primaryjoin="and_(UserListItem.tvdb_id == Episode.tvdb_id, UserListItem.kind == 'EPISODE')",
         uselist=False,
         viewonly=True,
     )
