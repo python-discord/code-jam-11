@@ -16,6 +16,8 @@ class SpeechBubble:
         self,
         critter: Critter,
         content: str,
+        screen_width: int,
+        screen_height: int,
         duration: float = 5.0,
         bg_color: str = "#FFFFFF",
         text_color: tuple[int, int, int] = (0, 0, 0),
@@ -38,6 +40,8 @@ class SpeechBubble:
         self.border_radius = border_radius
         self.max_width = max_width
         self.opacity = 51
+        self.screen_width = screen_width
+        self.screen_height = screen_height
 
         self.font = pygame.font.Font(None, font_size)
         self.surface = None
@@ -100,13 +104,11 @@ class SpeechBubble:
     def update(self, delta: float) -> None:
         critter_x, critter_y = self.critter.x, self.critter.y
         bubble_width, bubble_height = self.surface.get_size()
-        screen_width, screen_height = pygame.display.get_surface().get_size()
-
         x = critter_x - bubble_width // 2
         y = critter_y - bubble_height - 20
 
-        x = max(0, min(x, screen_width - bubble_width))
-        y = max(0, min(y, screen_height - bubble_height))
+        x = max(0, min(x, self.screen_width - bubble_width))
+        y = max(0, min(y, self.screen_height - bubble_height))
 
         self.position = (x, y)
 

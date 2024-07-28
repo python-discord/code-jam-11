@@ -308,47 +308,76 @@ class EcoCordClient(discord.Client):
         while not self.ready:
             await asyncio.sleep(1)
 
-        thread = await self.fetch_channel(thread_id)
+        try:
+            thread = await self.fetch_channel(thread_id)
+        except discord.errors.NotFound:
+            logging.exception("Thread %s not found. Stopping GIF sending for channel %s", thread_id, channel_id)
+            return
+
         message_queue = deque(maxlen=MAX_MESSAGES)
 
         # Find existing messages and populate the queue
-        existing_messages = await self.find_existing_messages(thread)
-        # Delete all existing messages except the last max messages
-        oldest_messages = existing_messages[:-MAX_MESSAGES]
-        for message in oldest_messages:
-            await message.delete()
-        existing_messages = existing_messages[-MAX_MESSAGES:]
-        message_queue.extend(existing_messages)
+        try:
+            existing_messages = await self.find_existing_messages(thread)
+            # Delete all existing messages except the last max messages
+            oldest_messages = existing_messages[:-MAX_MESSAGES]
+            for message in oldest_messages:
+                await message.delete()
+            existing_messages = existing_messages[-MAX_MESSAGES:]
+            message_queue.extend(existing_messages)
+        except Exception:
+            logging.exception("Error processing existing messages")
 
         while True:
-            guild_data = self.guilds_data.get(guild_id)
-            if not guild_data:
-                return
+            try:
+                guild_data = self.guilds_data.get(guild_id)
+                if not guild_data:
+                    logging.warning("Guild data not found for guild %s. Stopping GIF sending.", guild_id)
+                    return
 
-            ecosystem_manager = guild_data["ecosystem_managers"].get(channel_id)
-            if not ecosystem_manager:
-                return
+                ecosystem_manager = guild_data["ecosystem_managers"].get(channel_id)
+                if not ecosystem_manager:
+                    logging.warning("Ecosystem manager not found for channel %s. Stopping GIF sending.", channel_id)
+                    return
 
-            gif_data = ecosystem_manager.get_latest_gif()
-            if not gif_data:
-                await asyncio.sleep(0.01)
-                continue
+                gif_data = ecosystem_manager.get_latest_gif()
+                if not gif_data:
+                    await asyncio.sleep(0.01)
+                    continue
 
-            gif_bytes, timestamp = gif_data
+                gif_bytes, timestamp = gif_data
 
-            content = f"Ecosystem for #{self.get_channel(channel_id).name}"
-            logging.info("Sending new ecosystem GIF message to thread %s in guild %s", thread_id, guild_id)
-            new_message = await thread.send(
-                content=content, file=discord.File(io.BytesIO(gif_bytes), filename="ecosystem.gif")
-            )
+                logging.info("Sending new ecosystem GIF message to thread %s in guild %s", thread_id, guild_id)
 
-            # If the queue is full, the oldest message will be automatically removed
-            # We need to delete it from Discord as well
-            if len(message_queue) == MAX_MESSAGES:
-                old_message = message_queue[0]
-                await old_message.delete()
+                retry_count = 0
+                while retry_count < 3:
+                    try:
+                        new_message = await thread.send(
+                            file=discord.File(io.BytesIO(gif_bytes), filename="ecosystem.gif")
+                        )
+                        break
+                    except discord.errors.HTTPException as e:
+                        retry_count += 1
+                        logging.warning("Failed to send GIF (attempt %d): %s", retry_count, str(e))
+                        await asyncio.sleep(5)
+                else:
+                    logging.error("Failed to send GIF after 3 attempts. Skipping this update.")
+                    continue
 
-            message_queue.append(new_message)
+                # If the queue is full, the oldest message will be automatically removed
+                # We need to delete it from Discord as well
+                if len(message_queue) == MAX_MESSAGES:
+                    old_message = message_queue[0]
+                    try:
+                        await old_message.delete()
+                    except discord.errors.NotFound:
+                        logging.warning("Old message not found, it may have been deleted already.")
+
+                message_queue.append(new_message)
+
+            except Exception:
+                logging.exception("Unexpected error in send_gifs")
+                await asyncio.sleep(10)  # Wait a bit before retrying the whole loop
 
     async def find_existing_messages(self, channel: discord.TextChannel) -> list[discord.Message]:
         """Find existing ecosystem messages in the given channel.
@@ -362,11 +391,7 @@ class EcoCordClient(discord.Client):
             list[discord.Message]: A list of existing ecosystem messages, sorted by creation time.
 
         """
-        existing_messages = [
-            message
-            async for message in channel.history(limit=100)
-            if message.author == self.user and message.content.startswith("Ecosystem")
-        ]
+        existing_messages = [message async for message in channel.history(limit=100) if message.author == self.user]
         return sorted(existing_messages, key=lambda m: m.created_at)
 
     async def run_bot(self) -> None:
@@ -381,42 +406,42 @@ class EcoCordClient(discord.Client):
         """Event receiver for when the bot joins a new guild."""
         await self.initialize_guild(guild)
 
-        # Find a channel visible to admins (e.g., a "general" or "admin" channel)
-        admin_channel = next(
-            (
-                channel
-                for channel in guild.text_channels
-                if channel.permissions_for(guild.me).send_messages
-                and channel.overwrites_for(guild.default_role).read_messages is not False
-                and any(
+        embed = discord.Embed(
+            title="EcoCord Bot Installed!",
+            description="Bot installed. Admins can use `/configure` to set it up.",
+            color=discord.Color.blue(),
+        )
+
+        # Separate channels into admin-visible and others
+        admin_channels = []
+        other_channels = []
+
+        for channel in guild.text_channels:
+            if channel.permissions_for(guild.me).send_messages:
+                if channel.overwrites_for(guild.default_role).read_messages is not False and any(
                     role.permissions.administrator
                     for role in guild.roles
                     if channel.overwrites_for(role).read_messages is not False
-                )
-            ),
-            None,
-        )
+                ):
+                    admin_channels.append(channel)
+                else:
+                    other_channels.append(channel)
 
-        if admin_channel:
-            embed = discord.Embed(
-                title="EcoCord Bot Installed!",
-                description="Bot installed. Admins can use `/configure` to set it up.",
-                color=discord.Color.blue(),
-            )
-
+        # Try admin channels first, then other channels
+        for channel in admin_channels + other_channels:
             try:
-                await admin_channel.send(embed=embed)
+                await channel.send(embed=embed)
                 logging.info(
-                    "Sent welcome message in guild %s (ID: %s) in channel %s", guild.name, guild.id, admin_channel.name
+                    "Sent welcome message in guild %s (ID: %s) in channel %s", guild.name, guild.id, channel.name
                 )
             except discord.errors.Forbidden:
-                logging.warning(
-                    "Failed to send welcome message in guild %s (ID: %s) due to permissions", guild.name, guild.id
-                )
-        else:
-            logging.warning(
-                "Couldn't find suitable channel to send welcome message in guild %s (ID: %s)", guild.name, guild.id
-            )
+                continue  # Try the next channel if this one didn't work
+            else:
+                return  # Exit the method after successfully sending the message
+        # If we've gone through all channels and couldn't send the message
+        logging.warning(
+            "Couldn't find any suitable channel to send welcome message in guild %s (ID: %s)", guild.name, guild.id
+        )
 
     async def on_guild_remove(self, guild: discord.Guild) -> None:
         """Event receiver for when the bot is removed from a guild."""

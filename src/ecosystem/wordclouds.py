@@ -13,6 +13,7 @@ class WordCloudObject:
         self.speed = speed
         self.image = None
         self.strength = 24
+        self.needs_regeneration = True
 
     def generate_wordcloud(self, surface: pygame.Surface, words: str) -> None:
         """Generate a new word cloud with white text."""
@@ -33,13 +34,15 @@ class WordCloudObject:
             self.image = self.image.convert_alpha()
 
     def change_words(self, new_words: str) -> None:
-        """Change the words in the word cloud."""
+        """Change the words in the word cloud and mark for regeneration."""
         self.words = new_words
+        self.needs_regeneration = True
 
     def draw(self, surface: pygame.Surface) -> None:
         """Draw the word cloud on the given surface using blend mode."""
-        if self.image is None:
+        if self.needs_regeneration or self.image is None:
             self.generate_wordcloud(surface, self.words)
+            self.needs_regeneration = False
 
         if self.image:
             # Blend the word cloud with the background

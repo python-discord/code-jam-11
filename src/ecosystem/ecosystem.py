@@ -24,6 +24,7 @@ from PIL import Image
 
 from bot.discord_event import (
     DiscordEvent,
+    EventType,
     SerializableGuild,
     SerializableMember,
     SerializableTextChannel,
@@ -293,7 +294,7 @@ class Ecosystem:
         frames = shared_frames.get_array()
 
         def optimize_frame(frame: np.ndarray) -> Image.Image:
-            return Image.fromarray(frame).quantize(method=Image.MEDIANCUT, colors=256)
+            return Image.fromarray(frame)
 
         with ThreadPoolExecutor() as executor:
             while True:
@@ -610,16 +611,17 @@ class EcosystemManager:
         current_time = datetime.now(UTC)
         user_id = event.member.id
 
-        if event.type == "MESSAGE":
+        if event.type == EventType.MESSAGE:
             self._handle_user_activity(ecosystem, user_id, current_time, False, user_info)
             self._add_message_to_history(ecosystem, event.content, current_time)
 
             critter = self.user_critters.get(user_id)
             if critter:
-                speech_bubble = SpeechBubble(critter, event.content, duration=5, bg_color=user_info.role_color)
+                speech_bubble = SpeechBubble(
+                    critter, event.content, self.width, self.height, duration=5, bg_color=user_info.role_color
+                )
                 ecosystem.speech_bubbles.append(speech_bubble)
-
-        elif event.type == "TYPING":
+        elif event.type == EventType.TYPING:
             self._handle_user_activity(ecosystem, user_id, current_time, True, user_info)
 
         self._remove_inactive_users(ecosystem, current_time)
@@ -640,8 +642,6 @@ class EcosystemManager:
         """
         if user_id not in self.user_critters:
             self._spawn_new_critter(ecosystem, user_id, user_info)
-        elif is_typing:
-            self.user_critters[user_id].move()
 
         self.last_activity[user_id] = current_time
         self._remove_inactive_users(ecosystem, current_time)
@@ -729,7 +729,7 @@ class EcosystemManager:
         if user_info:
             content = "Hello, ecosystem!"
             event = DiscordEvent(
-                type="MESSAGE",
+                type=EventType.MESSAGE,
                 content=content,
                 timestamp=datetime.now(UTC),
                 guild=SerializableGuild(guild_id, "Simulated Guild", 0),
