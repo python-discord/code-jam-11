@@ -88,9 +88,11 @@ class InfoCog(Cog):
                             await Movie.fetch(query, self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS)
                         ]
                     case "series":
-                        response = [
-                            await Series.fetch(query, self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS)
-                        ]
+                        series = await Series.fetch(
+                            query, self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS
+                        )
+                        await series.fetch_episodes()
+                        response = [series]
                     case None:
                         await ctx.respond(
                             "You must specify a type (movie or series) when searching by ID.", ephemeral=True
@@ -104,6 +106,10 @@ class InfoCog(Cog):
                 return
         else:
             response = await self.tvdb_client.search(query, limit=5, entity_type=entity_type)
+            for element in response:
+                await element.ensure_translations()
+                if isinstance(element, Series):
+                    await element.fetch_episodes()
             if not response:
                 await ctx.respond("No results found.")
                 return

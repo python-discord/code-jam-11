@@ -196,8 +196,9 @@ class EpisodeView(DynamicMediaView):
             title=self.current_episode.formatted_name,
             description=description,
             color=discord.Color.blurple(),
-            url=f"https://www.thetvdb.com/series/{self.series.slug}",
+            url=self.series.url,
         )
-        embed.set_image(url=f"https://www.thetvdb.com{self.current_episode.image}")
+        if self.current_episode.image_url:
+            embed.set_image(url=self.current_episode.image_url)
         embed.set_footer(text=THETVDB_COPYRIGHT_FOOTER, icon_url=THETVDB_LOGO)
         return embed

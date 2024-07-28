@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import UTC, datetime
 from enum import Enum
 from typing import ClassVar, Literal, Self, final, overload, override
 
@@ -209,6 +210,14 @@ class _Media(ABC):
 
         return cls(client, response.data)
 
+    async def ensure_translations(self) -> None:
+        """Ensure that response contains translations."""
+        if not isinstance(self.data, SeriesExtendedRecord):
+            series = await self.fetch(
+                media_id=self.id, client=self.client, extended=True, short=True, meta=FetchMeta.TRANSLATIONS
+            )
+            self.set_attributes(series.data)
+
 
 @final
 class Movie(_Media):
@@ -219,6 +228,11 @@ class Movie(_Media):
 
     ResponseType = MoviesIdGetResponse
     ExtendedResponseType = MoviesIdExtendedGetResponse
+
+    @override
+    def set_attributes(self, data: AnyRecord | SearchResult) -> None:
+        super().set_attributes(data)
+        self.url: str | None = f"https://www.thetvdb.com/movies/{self.slug}" if self.slug else None
 
     @override
     @classmethod
@@ -249,6 +263,7 @@ class Series(_Media):
             self.seasons = self.data.seasons
             if self.data.episodes:
                 self.episodes = [Episode(episode, client=self.client) for episode in self.data.episodes]
+        self.url: str | None = f"https://www.thetvdb.com/series/{self.slug}" if self.slug else None
 
     @override
     @classmethod
@@ -287,28 +302,36 @@ class Episode:
     """Represents an episode from Tvdb."""
 
     def __init__(self, data: EpisodeBaseRecord | EpisodeExtendedRecord, client: "TvdbClient") -> None:
+        self.client = client
+        self.set_attributes(data)
+
+    def set_attributes(self, data: EpisodeBaseRecord | EpisodeExtendedRecord) -> None:
+        """Set attributes."""
         self.data = data
         self.id: int | None = self.data.id
-        self.image: str | None = self.data.image
+        self.image_url: str | None = self.data.image if self.data.image else None
         self.name: str | None = self.data.name
         self.overview: str | None = self.data.overview
         self.number: int | None = self.data.number
         self.season_number: int | None = self.data.season_number
-        self.eng_name: str | None = None
-        self.eng_overview: str | None = None
+        self.name_eng: str | None = None
+        self.overview_eng: str | None = None
         self.series_id: int | None = self.data.series_id
-        self.client = client
+        self.air_date: datetime | None = None
+        if self.data.aired:
+            self.air_date = datetime.strptime(self.data.aired, "%Y-%m-%d").replace(tzinfo=UTC)
+        self.aired: bool = self.air_date is not None and self.air_date <= datetime.now(UTC)
 
         if isinstance(self.data, EpisodeExtendedRecord):
             if self.data.translations and self.data.translations.name_translations:
-                self.eng_name = get_first(
+                self.name_eng = get_first(
                     translation.name
                     for translation in self.data.translations.name_translations
                     if translation.language == "eng"
                 )
 
             if self.data.translations and self.data.translations.overview_translations:
-                self.eng_overview = get_first(
+                self.overview_eng = get_first(
                     translation.overview
                     for translation in self.data.translations.overview_translations
                     if translation.language == "eng"
@@ -335,6 +358,14 @@ class Episode:
             raise ValueError("No data found for Episode")
         return cls(response.data, client=client)
 
+    async def ensure_translations(self) -> None:
+        """Ensure that response contains translations."""
+        if not isinstance(self.data, EpisodeExtendedRecord):
+            if not self.id:
+                raise ValueError("Episode has no ID")
+            episode = await self.fetch(self.id, client=self.client, extended=True)
+            self.set_attributes(episode.data)
+
     async def fetch_series(
         self, *, extended: bool = False, short: bool | None = None, meta: FetchMeta | None = None
     ) -> Series:
@@ -348,6 +379,13 @@ class Episode:
             short=short,
             meta=meta,
         )
+
+    @property
+    def bilingual_name(self) -> str | None:
+        """Returns the name in both languages."""
+        if self.name == self.name_eng:
+            return self.name
+        return f"{self.name} ({self.name_eng})"
 
 
 class TvdbClient:

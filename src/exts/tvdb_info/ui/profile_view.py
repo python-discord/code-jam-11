@@ -1,5 +1,5 @@
 import textwrap
-from itertools import chain, groupby
+from itertools import groupby
 from typing import final
 
 import discord
@@ -64,6 +64,7 @@ class ProfileView(discord.ui.View):
                     watched_shows.append(item.series)
                 case UserListItemKind.EPISODE:
                     await self.bot.db_session.refresh(item, ["episode"])
+                    await self.bot.db_session.refresh(item.episode, ["series"])
                     watched_episodes.append(item.episode)
 
         # We don't actually care about episodes in the profile view, however, we need them
@@ -74,9 +75,9 @@ class ProfileView(discord.ui.View):
             if series.episodes is None:
                 raise ValueError("Found an episode in watched list for a series with no episodes")
 
-            last_episode = series.episodes[-1]
-            if last_episode.id is None:
-                raise ValueError("Episode has no ID")
+            last_episode = get_first(episode for episode in reversed(series.episodes) if episode.aired)
+            if not last_episode or last_episode.id is None:
+                raise ValueError("Episode has no ID or is None")
 
             episodes_it = iter(episodes)
             first_db_episode = get_first(episodes_it)
@@ -87,9 +88,6 @@ class ProfileView(discord.ui.View):
             group_episode_ids.add(first_db_episode.tvdb_id)
             await self.bot.db_session.refresh(first_db_episode, ["series"])
 
-            # TODO: This should not be happening, yet it is... It means that there is an episode which
-            # doesn't have a corresponding series, even though it has a foreign key to it that's not
-            # empty, it's almost like the Series got deleted or something.
             if first_db_episode.series is None:  # pyright: ignore[reportUnnecessaryComparison]
                 manual = await self.bot.db_session.get(SeriesTable, first_db_episode.series_id)
                 raise ValueError(f"DB series is None id={first_db_episode.series_id}, manual={manual}")
@@ -160,7 +158,7 @@ class ProfileView(discord.ui.View):
 
         stats_str = textwrap.dedent(
             f"""
-            **Total Shows:** {len(self.fetched_favorite_shows)} \
+            **Total Shows:** {len(self.fetched_watched_shows)} \
             ({self.episodes_total} episode{'s' if self.episodes_total > 0 else ''})
             **Total Movies:** {len(self.fetched_watched_movies)}
             """
@@ -169,24 +167,27 @@ class ProfileView(discord.ui.View):
 
         # TODO: What if there's too many things here, we might need to paginate this.
 
+        favorite_items: list[str] = []
+        for item in self.fetched_favorite_movies:
+            favorite_items.append(f"[{MOVIE_EMOJI} {item.bilingual_name}]({item.url})")  # noqa: PERF401
+        for item in self.fetched_favorite_shows:
+            favorite_items.append(f"[{SERIES_EMOJI} {item.bilingual_name}]({item.url})")  # noqa: PERF401
+
         embed.add_field(
             name="Favorites",
-            value="\n".join(
-                f"{MOVIE_EMOJI if isinstance(item, Movie) else SERIES_EMOJI} {item.bilingual_name}"
-                for item in chain(self.fetched_favorite_shows, self.fetched_favorite_movies)
-            ),
+            value="\n".join(favorite_items) or "No favorites",
         )
         watched_items: list[str] = []
         for item in self.fetched_watched_movies:
-            watched_items.append(f"{MOVIE_EMOJI} {item.bilingual_name}")  # noqa: PERF401
+            watched_items.append(f"[{MOVIE_EMOJI} {item.bilingual_name}]({item.url})")  # noqa: PERF401
         for item in self.fetched_watched_shows:
-            watched_items.append(f"{SERIES_EMOJI} {item.bilingual_name}")  # noqa: PERF401
+            watched_items.append(f"[{SERIES_EMOJI} {item.bilingual_name}]({item.url})")  # noqa: PERF401
         for item in self.fetched_partially_watched_shows:
-            watched_items.append(f"{SERIES_EMOJI} {item.bilingual_name} partially")  # noqa: PERF401
+            watched_items.append(f"[{SERIES_EMOJI} {item.bilingual_name}]({item.url}) partially")  # noqa: PERF401
 
         embed.add_field(
             name="Watched",
-            value="\n".join(watched_items),
+            value="\n".join(watched_items) or "No watched items",
         )
         return embed
 

@@ -116,10 +116,9 @@ class _SeriesOrMovieView(MediaView):
 
         if isinstance(self.media_data, Series):
             title = f"{SERIES_EMOJI} {title}"
-            url = f"https://www.thetvdb.com/movies/{self.media_data.slug}"
         else:
             title = f"{MOVIE_EMOJI} {title}"
-            url = f"https://www.thetvdb.com/series/{self.media_data.slug}"
+        url = self.media_data.url
 
         embed = discord.Embed(title=title, color=discord.Color.blurple(), url=url)
         embed.add_field(name="Overview", value=overview, inline=False)
@@ -225,6 +224,8 @@ class SeriesView(_SeriesOrMovieView):
             for episode in self.media_data.episodes:
                 if not episode.id:
                     raise ValueError("Episode has no ID")
+                if not episode.aired:
+                    continue
 
                 await list_put_item_safe(
                     self.bot.db_session,
