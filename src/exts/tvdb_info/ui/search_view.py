@@ -38,6 +38,9 @@ def _search_view(
             media_data=result,
         )
 
+    if len(results) == 1:
+        return view
+
     # Add support for switching between search results dynamically
     search_result_dropdown = discord.ui.Select(
         placeholder="Not what you're looking for? Select a different result.",
