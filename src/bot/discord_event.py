@@ -88,7 +88,7 @@ class SerializableMember:
         roles (list[int]): List of role IDs the member has.
         guild_id (int): The ID of the guild the member belongs to.
         avatar (str): The URL of the member's avatar.
-        color (int): The color associated with the member's top role.
+        color (str): The color associated with the member's top role.
 
     """
 
@@ -98,7 +98,7 @@ class SerializableMember:
     roles: list[int]
     guild_id: int
     avatar: str
-    color: int
+    color: str
 
 
 @dataclass

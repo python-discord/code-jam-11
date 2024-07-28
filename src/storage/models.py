@@ -302,16 +302,15 @@ class Database:
         )
         await self.execute(command=CommandType.INSERT, query=query, parameters=data)
 
-    async def get_random_user_info(self, guild_id: int) -> UserInfo | None:
+    async def get_random_user_info(self) -> UserInfo | None:
         """Retrieve random user info for a specific guild."""
         query = """
         SELECT user_id, guild_id, avatar_data, role_color, last_updated
         FROM user_info
-        WHERE guild_id = ?
         ORDER BY RANDOM()
         LIMIT 1
         """
-        async with aiosqlite.connect(self.db_file_path) as db, db.execute(query, (guild_id,)) as cursor:
+        async with aiosqlite.connect(self.db_file_path) as db, db.execute(query) as cursor:
             row = await cursor.fetchone()
             if row:
                 return UserInfo(

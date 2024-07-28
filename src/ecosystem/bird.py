@@ -98,39 +98,34 @@ class Bird(Critter):
         self.x, self.y = self.position.x, self.position.y
 
     def draw(self, surface: Surface) -> None:
-        """Draw the bird on the given surface.
-
-        Args:
-        ----
-            surface (Surface): The pygame surface to draw on.
-
-        """
-        # Create a surface for the bird body
+        """Draw the bird on the given surface."""
+        # Create a surface for the bird
         bird_surface = pygame.Surface((int(self.size * 2), int(self.size * 2)), pygame.SRCALPHA)
 
-        # Draw the avatar with 50% opacity if available
+        # Create a mask surface for the bird's shape
+        mask_surface = pygame.Surface((int(self.size * 2), int(self.size * 2)), pygame.SRCALPHA)
+        pygame.draw.circle(mask_surface, (255, 255, 255), (int(self.size), int(self.size)), int(self.size))
+
+        # Draw the avatar and apply the mask if available
         if self.avatar_surface:
             avatar_scaled = pygame.transform.scale(self.avatar_surface, (int(self.size * 2), int(self.size * 2)))
-            avatar_scaled.set_alpha(128)  # 50% opacity
+            avatar_scaled.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             bird_surface.blit(avatar_scaled, (0, 0))
 
-        # Draw the bird body shape
-        pygame.draw.circle(bird_surface, self.color, (int(self.size), int(self.size)), int(self.size))
-
-        # Create a mask from the body shape
-        mask = pygame.mask.from_surface(bird_surface)
-        mask_surface = mask.to_surface(setcolor=self.color, unsetcolor=(0, 0, 0, 0))
-
-        # Combine the avatar and the bird shape using the mask
-        bird_surface.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        # Draw the bird body shape with transparency
+        body_color = (*self.color, 150)  # Add alpha value for transparency
+        body_surface = pygame.Surface((int(self.size * 2), int(self.size * 2)), pygame.SRCALPHA)
+        pygame.draw.circle(body_surface, body_color, (int(self.size), int(self.size)), int(self.size))
+        bird_surface.blit(body_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
 
         # Draw the combined bird surface on the main surface
         surface.blit(bird_surface, (int(self.position.x - self.size), int(self.position.y - self.size)))
 
-        # Draw wings
+        # Draw wings (slightly transparent)
+        wing_color = (*self.color, 100)  # More transparent wings
         left_wing = self.position + Vector2(-self.size, 0).rotate(self.wing_angle)
         right_wing = self.position + Vector2(self.size, 0).rotate(-self.wing_angle)
-        pygame.draw.polygon(surface, self.color, [self.position, left_wing, right_wing])
+        pygame.draw.polygon(surface, wing_color, [self.position, left_wing, right_wing])
 
         # Draw eye
         eye_position = self.position + self.velocity.normalize() * self.size * 0.5

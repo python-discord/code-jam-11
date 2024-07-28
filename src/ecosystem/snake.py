@@ -1,3 +1,4 @@
+import math
 import random
 
 import pygame
@@ -27,6 +28,8 @@ class Snake(Critter):
         """
         super().__init__(member_id, x, y, width, height, avatar)
         self.segments = [Vector2(x, y)]
+        self.x = x
+        self.y = y
         self.direction = Vector2(1, 0)
         self.min_y = int(self.height * 0.65)
         self.max_y = int(self.height * 0.80)
@@ -90,10 +93,15 @@ class Snake(Critter):
         new_head = head + self.direction * self.speed * activity * delta * 60
 
         new_head.y = max(min(new_head.y, self.max_y), self.min_y)
+        new_head.x = new_head.x % self.width  # Wrap around horizontally
 
         self.segments.insert(0, new_head)
         if len(self.segments) > self.length:
             self.segments.pop()
+
+        # Update self.x and self.y to match the new head position
+        self.x = int(new_head.x)
+        self.y = int(new_head.y)
 
     def draw(self, surface: Surface) -> None:
         """Draw the snake on the given surface.
@@ -103,44 +111,71 @@ class Snake(Critter):
             surface (Surface): The pygame Surface to draw on.
 
         """
-        for i, segment in enumerate(self.segments):
+        # Draw body segments with sinusoidal wave
+        time = pygame.time.get_ticks() / 1000
+        for i, segment in enumerate(self.segments[1:], 1):
             radius = int((10 * (1 - i / len(self.segments)) + 5) * self.scale)
             alpha = int(255 * (1 - i / len(self.segments)))
-            color = (self.color.r, self.color.g, self.color.b, alpha)
+            color = (*self.color[:3], alpha)
 
-            # Create a surface for the snake segment
-            segment_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            # Apply sinusoidal wave
+            wave_amplitude = 5 * self.scale * (1 - i / len(self.segments))
+            wave_frequency = 0.2
+            wave_speed = 3
+            wave_offset = math.sin(time * wave_speed + i * wave_frequency) * wave_amplitude
 
-            # Draw the avatar with 50% opacity if available
-            if self.avatar_surface:
-                avatar_scaled = pygame.transform.scale(self.avatar_surface, (radius * 2, radius * 2))
-                avatar_scaled.set_alpha(128)  # 50% opacity
-                segment_surface.blit(avatar_scaled, (0, 0))
+            wave_vector = self.direction.rotate(90).normalize() * wave_offset
+            wave_pos = segment + wave_vector
 
-            # Draw the snake segment shape
-            pygame.draw.circle(segment_surface, color, (radius, radius), radius)
+            pygame.draw.circle(surface, color, (int(wave_pos.x), int(wave_pos.y)), radius)
 
-            # Create a mask from the segment shape
-            mask = pygame.mask.from_surface(segment_surface)
-            mask_surface = mask.to_surface(setcolor=color, unsetcolor=(0, 0, 0, 0))
-
-            # Combine the avatar and the segment shape using the mask
-            segment_surface.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-
-            # Draw the combined segment surface on the main surface
-            surface.blit(segment_surface, (int(segment.x - radius), int(segment.y - radius)))
-
+        # Draw head
         head = self.segments[0]
-        eye_offset = self.direction.normalize() * 8 * self.scale
-        left_eye = head + eye_offset.rotate(90)
-        right_eye = head + eye_offset.rotate(-90)
+        head_radius = int(15 * self.scale)
 
-        eye_radius = int(4 * self.scale)
-        pupil_radius = int(2 * self.scale)
+        # Create a surface for the head
+        head_surface = pygame.Surface((head_radius * 2, head_radius * 2), pygame.SRCALPHA)
+
+        # Draw the base color of the head
+        pygame.draw.circle(head_surface, self.color, (head_radius, head_radius), head_radius)
+
+        # Apply avatar if available
+        if self.avatar_surface:
+            avatar_scaled = pygame.transform.scale(self.avatar_surface, (head_radius * 2, head_radius * 2))
+
+            # Create a circular mask
+            mask_surface = pygame.Surface((head_radius * 2, head_radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(mask_surface, (255, 255, 255), (head_radius, head_radius), head_radius)
+
+            # Apply mask to avatar
+            avatar_scaled.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+            # Blend avatar with head color
+            head_surface.blit(avatar_scaled, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+        # Draw the head on the main surface
+        surface.blit(head_surface, (int(head.x - head_radius), int(head.y - head_radius)))
+
+        # Draw cuter eyes
+        eye_offset = Vector2(7 * self.scale, 0)
+        left_eye = head + eye_offset.rotate(0)
+        right_eye = head + eye_offset.rotate(180)
+
+        eye_radius = int(5 * self.scale)
+        pupil_radius = int(3 * self.scale)
+
+        # Draw eye whites
         pygame.draw.circle(surface, (255, 255, 255), (int(left_eye.x), int(left_eye.y)), eye_radius)
         pygame.draw.circle(surface, (255, 255, 255), (int(right_eye.x), int(right_eye.y)), eye_radius)
-        pygame.draw.circle(surface, (0, 0, 0), (int(left_eye.x), int(left_eye.y)), pupil_radius)
-        pygame.draw.circle(surface, (0, 0, 0), (int(right_eye.x), int(right_eye.y)), pupil_radius)
+
+        # Draw pupils with a slight upward offset
+        pupil_offset = Vector2(0, -1 * self.scale)
+        pygame.draw.circle(
+            surface, (0, 0, 0), (int(left_eye.x + pupil_offset.x), int(left_eye.y + pupil_offset.y)), pupil_radius
+        )
+        pygame.draw.circle(
+            surface, (0, 0, 0), (int(right_eye.x + pupil_offset.x), int(right_eye.y + pupil_offset.y)), pupil_radius
+        )
 
     def activate(self) -> None:
         self.state = "spawn"
@@ -153,6 +188,8 @@ class Snake(Critter):
         self.alive = True
         self.activate()
         self.segments = [Vector2(random.randint(0, self.width), random.randint(self.min_y, self.max_y))]
+        self.x = int(self.segments[0].x)
+        self.y = int(self.segments[0].y)
         self.color = self.generate_color()
 
     def despawn(self) -> None:

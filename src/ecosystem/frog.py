@@ -29,7 +29,7 @@ class Frog(Critter):
         """
         super().__init__(member_id, x, y, width, height, avatar)
         self.size = random.uniform(20, 30)
-        self.color = (random.randint(50, 100), random.randint(150, 200), random.randint(50, 100))
+        self.color = (random.randint(100, 150), random.randint(200, 255), random.randint(100, 150))
         self.eye_color = (255, 255, 255)
         self.pupil_color = (0, 0, 0)
 
@@ -110,38 +110,39 @@ class Frog(Critter):
 
         # Create a surface for the frog body
         frog_surface = pygame.Surface((scaled_size, scaled_size), pygame.SRCALPHA)
-        body_rect = pygame.Rect(0, 0, scaled_size, scaled_size)
 
-        # Draw the avatar with 50% opacity if available
+        # Create a mask surface for the frog's shape
+        mask_surface = pygame.Surface((scaled_size, scaled_size), pygame.SRCALPHA)
+        pygame.draw.ellipse(mask_surface, (255, 255, 255), pygame.Rect(0, 0, scaled_size, scaled_size))
+
+        # Draw the avatar and apply the mask if available
         if self.avatar_surface:
             avatar_scaled = pygame.transform.scale(self.avatar_surface, (scaled_size, scaled_size))
-            avatar_scaled.set_alpha(128)  # 50% opacity
+            avatar_scaled.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             frog_surface.blit(avatar_scaled, (0, 0))
 
-        # Draw the frog body shape
-        pygame.draw.ellipse(frog_surface, self.color, body_rect)
-
-        # Create a mask from the body shape
-        mask = pygame.mask.from_surface(frog_surface)
-        mask_surface = mask.to_surface(setcolor=self.color, unsetcolor=(0, 0, 0, 0))
-
-        # Combine the avatar and the frog shape using the mask
-        frog_surface.blit(mask_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        # Draw the frog body shape with transparency
+        body_color = (*self.color, 150)  # Add alpha value for transparency
+        body_surface = pygame.Surface((scaled_size, scaled_size), pygame.SRCALPHA)
+        pygame.draw.ellipse(body_surface, body_color, pygame.Rect(0, 0, scaled_size, scaled_size))
+        frog_surface.blit(body_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
 
         # Draw the combined frog surface on the main surface
         surface.blit(frog_surface, (int(self.x - scaled_size // 2), int(self.y - scaled_size // 2)))
 
+        # Draw eyes (white part)
         eye_size = scaled_size // 4
         left_eye_pos = (int(self.x - scaled_size // 4), int(self.y - scaled_size // 4))
         right_eye_pos = (int(self.x + scaled_size // 4), int(self.y - scaled_size // 4))
-
         pygame.draw.circle(surface, self.eye_color, left_eye_pos, eye_size)
         pygame.draw.circle(surface, self.eye_color, right_eye_pos, eye_size)
 
+        # Draw pupils
         pupil_size = eye_size // 2
         pygame.draw.circle(surface, self.pupil_color, left_eye_pos, pupil_size)
         pygame.draw.circle(surface, self.pupil_color, right_eye_pos, pupil_size)
 
+        # Draw mouth
         mouth_rect = pygame.Rect(self.x - scaled_size // 4, self.y, scaled_size // 2, scaled_size // 4)
         pygame.draw.arc(surface, (50, 50, 50), mouth_rect, math.pi, 2 * math.pi, 2)
 

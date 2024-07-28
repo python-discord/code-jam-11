@@ -1,10 +1,13 @@
+import asyncio
 import atexit
 import contextlib
 import io
 import multiprocessing
 import time
+from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from typing import Any
 
 import numpy as np
 
@@ -26,10 +29,8 @@ from bot.discord_event import (
 )
 from storage import Database, UserInfo
 
-from .bird import Bird
 from .cloud_manager import CloudManager
 from .frog import Frog
-from .snake import Snake
 from .speech_bubble import SpeechBubble
 from .wordclouds import WordCloudObject
 
@@ -82,7 +83,6 @@ class Ecosystem:
 
         self.font = None
         self.activity_slider = None
-        self.spawn_critter_button = None
         self.reset_button = None
 
         self.generate_gifs = generate_gifs
@@ -138,19 +138,8 @@ class Ecosystem:
 
         button_y = top_margin + self.activity_slider.height + button_spacing
 
-        self.spawn_critter_button = Button(
-            left_margin,
-            button_y,
-            button_width,
-            button_height,
-            "Spawn Critter",
-            (0, 255, 0),
-            (0, 0, 0),
-            self.font,
-        )
-
         self.reset_button = Button(
-            left_margin + button_width + button_spacing,
+            left_margin,
             button_y,
             button_width,
             button_height,
@@ -173,9 +162,6 @@ class Ecosystem:
         for critter in self.critters:
             critter.update(delta, self.activity)
 
-        if self.interactive:
-            self._handle_standard_spawning(delta)
-
         self._clean_up_entities()
 
         self.cloud_manager.update(delta)
@@ -183,17 +169,6 @@ class Ecosystem:
         self.speech_bubbles = [bubble for bubble in self.speech_bubbles if not bubble.is_expired()]
         for bubble in self.speech_bubbles:
             bubble.update(delta)
-
-    def _handle_standard_spawning(self, delta: float) -> None:
-        """Handle the standard spawning of entities based on activity level.
-
-        Args:
-        ----
-            delta (float): Time elapsed since the last update.
-
-        """
-        if random.random() < self.activity * delta:
-            self.spawn_critter()
 
     def _clean_up_entities(self) -> None:
         """Remove dead entities from the ecosystem."""
@@ -272,6 +247,16 @@ class Ecosystem:
         self.elapsed_time = 0
 
     @staticmethod
+    async def safe_task(coro: Coroutine[Any, Any, Any], task_name: str) -> None:
+        try:
+            await coro
+        except Exception as e:  # noqa: BLE001
+            print(f"Exception in {task_name}: {e!s}")
+            import traceback
+
+            traceback.print_exc()
+
+    @staticmethod
     def run_gif_generation_process(
         shared_frames: SharedNumpyArray,
         current_frame_index: multiprocessing.Value,
@@ -279,18 +264,17 @@ class Ecosystem:
         gif_info_queue: multiprocessing.Queue,
         fps: int,
     ) -> None:
-        try:
-            Ecosystem._gif_generation_process(
-                shared_frames, current_frame_index, frame_count_queue, gif_info_queue, fps
+        asyncio.run(
+            Ecosystem.safe_task(
+                Ecosystem._gif_generation_process(
+                    shared_frames, current_frame_index, frame_count_queue, gif_info_queue, fps
+                ),
+                "_gif_generation_process",
             )
-        except Exception as e:  # noqa: BLE001
-            print(f"Exception in _gif_generation_process: {e}")
-            import traceback
-
-            traceback.print_exc()
+        )
 
     @staticmethod
-    def _gif_generation_process(
+    async def _gif_generation_process(
         shared_frames: SharedNumpyArray,
         current_frame_index: multiprocessing.Value,
         frame_count_queue: multiprocessing.Queue,
@@ -350,19 +334,6 @@ class Ecosystem:
             self.frame_count_queue.put(None)
 
             self.gif_process.join()
-
-    def spawn_critter(self) -> None:
-        """Spawn a new critter in the ecosystem."""
-        critter_type = random.choice([Frog, Bird, Snake])
-        new_critter = critter_type(
-            member_id=random.randint(1, 1000000),
-            x=random.randint(0, self.width),
-            y=self.height - 20,
-            width=self.width,
-            height=self.height,
-        )
-        new_critter.spawn()
-        self.critters.append(new_critter)
 
 
 class Button:
@@ -461,7 +432,7 @@ class EcosystemManager:
 
         self.user_frogs = {}
         self.last_activity = {}
-        self.fake_user_ids = []
+        self.fake_user_ids = set()
 
     def start(self, show_controls: bool = True) -> None:
         """Start the ecosystem simulation.
@@ -480,13 +451,7 @@ class EcosystemManager:
         self.process.start()
 
     def run_and_catch_exceptions(self, show_controls: bool) -> None:
-        try:
-            self._run_ecosystem(show_controls)
-        except Exception as e:  # noqa: BLE001
-            print(f"Exception in _run_ecosystem: {e}")
-            import traceback
-
-            traceback.print_exc()
+        asyncio.run(self.safe_task(self._run_ecosystem(show_controls), "_run_ecosystem"))
 
     def stop(self) -> None:
         """Stop the ecosystem simulation."""
@@ -495,7 +460,16 @@ class EcosystemManager:
         if self.process:
             self.process.join()
 
-    def _run_ecosystem(self, show_controls: bool) -> None:
+    async def safe_task(self, coro: Coroutine[Any, Any, Any], task_name: str) -> None:
+        try:
+            await coro
+        except Exception as e:  # noqa: BLE001
+            print(f"Exception in {task_name}: {e!s}")
+            import traceback
+
+            traceback.print_exc()
+
+    async def _run_ecosystem(self, show_controls: bool) -> None:
         """Run the ecosystem simulation loop.
 
         Args:
@@ -524,9 +498,6 @@ class EcosystemManager:
         last_message_time = time.time()
         message_interval = 2.0  # Send a message every 2 seconds
 
-        if self.interactive:
-            self._spawn_initial_critters(ecosystem)
-
         while self.running:
             delta = clock.tick(self.fps) / 1000.0
 
@@ -540,7 +511,7 @@ class EcosystemManager:
                 # Simulate random messages
                 current_time = time.time()
                 if current_time - last_message_time >= message_interval:
-                    self._simulate_random_message(ecosystem)
+                    await self.safe_task(self._simulate_random_message(ecosystem), "_simulate_random_message")
                     last_message_time = current_time
 
             ecosystem.update(delta)
@@ -580,8 +551,6 @@ class EcosystemManager:
         """
         if ecosystem.activity_slider.collidepoint(pos):
             ecosystem.activity = (pos[0] - ecosystem.activity_slider.x) / ecosystem.activity_slider.width
-        elif ecosystem.spawn_critter_button.is_clicked(pos):
-            ecosystem.spawn_critter()
         elif ecosystem.reset_button.is_clicked(pos):
             ecosystem.reset()
 
@@ -606,7 +575,6 @@ class EcosystemManager:
             ),
         )
 
-        ecosystem.spawn_critter_button.draw(screen)
         ecosystem.reset_button.draw(screen)
 
         activity_text = ecosystem.font.render(f"Activity: {ecosystem.activity:.2f}", True, (0, 0, 0))
@@ -700,7 +668,7 @@ class EcosystemManager:
 
     def _spawn_new_critter(self, ecosystem: Ecosystem, user_id: int, user_info: UserInfo | None = None) -> None:
         if user_id not in self.user_frogs:
-            critter_type = random.choice([Frog, Bird, Snake])
+            critter_type = random.choice([Frog])
 
             avatar_data = user_info.avatar_data if user_info else None
 
@@ -750,44 +718,31 @@ class EcosystemManager:
             return self.gif_queue.get()
         return None
 
-    def _spawn_initial_critters(self, ecosystem: Ecosystem) -> None:
-        num_critters = random.randint(5, 15)  # Spawn between 5 and 15 critters
-        for _ in range(num_critters):
-            user_id = random.randint(1, 1000000)
-            self.fake_user_ids.append(user_id)
-            self._spawn_new_critter(ecosystem, user_id)
-
     async def _simulate_random_message(self, ecosystem: Ecosystem) -> None:
-        if not self.fake_user_ids:
-            return
-
         guild_id = random.randint(1, 1000000)
         channel_id = random.randint(1, 1000000)
 
-        async def simulate() -> None:
-            db = Database("ecocord")
-            await db.initialize()
-            user_info = await db.get_random_user_info(guild_id)
-
-            if user_info:
-                content = "Hello, ecosystem!"
-                event = DiscordEvent(
-                    type="MESSAGE",
-                    content=content,
-                    timestamp=datetime.now(UTC),
-                    guild=SerializableGuild(guild_id, "Simulated Guild", 0),
-                    channel=SerializableTextChannel(channel_id, "simulated-channel"),
-                    member=SerializableMember(
-                        user_info.user_id,
-                        f"SimulatedUser_{user_info.user_id}",
-                        f"SimulatedUser_{user_info.user_id}",
-                        guild_id,
-                        user_info.avatar_data,
-                        user_info.role_color,
-                    ),
-                )
-                self._process_event(ecosystem, (event, user_info))
-            else:
-                print("No user info found in the database.")
-
-        await simulate()
+        db = Database("ecocord")
+        user_info = await db.get_random_user_info()
+        if user_info:
+            content = "Hello, ecosystem!"
+            event = DiscordEvent(
+                type="MESSAGE",
+                content=content,
+                timestamp=datetime.now(UTC),
+                guild=SerializableGuild(guild_id, "Simulated Guild", 0),
+                channel=SerializableTextChannel(channel_id, "simulated-channel"),
+                member=SerializableMember(
+                    id=user_info.user_id,
+                    name=f"SimulatedUser_{user_info.user_id}",
+                    display_name=f"SimulatedUser_{user_info.user_id}",
+                    roles=[],
+                    guild_id=guild_id,
+                    avatar=user_info.avatar_data,
+                    color=user_info.role_color,
+                ),
+            )
+            self._process_event(ecosystem, (event, user_info))
+            self.fake_user_ids.add(user_info.user_id)
+        else:
+            print("No user info found in the database.")
