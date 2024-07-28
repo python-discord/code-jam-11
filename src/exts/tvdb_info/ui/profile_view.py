@@ -71,7 +71,9 @@ class ProfileView(ErrorHandledView):
         # We don't actually care about episodes in the profile view, however, we need them
         # because of the way shows are marked as watched (last episode watched -> show watched).
 
-        for series_id, episodes in groupby(watched_episodes, key=lambda x: x.series_id):
+        for series_id, episodes in groupby(
+            sorted(watched_episodes, key=lambda x: x.series_id), key=lambda x: x.series_id
+        ):
             series = await Series.fetch(series_id, client=self.tvdb_client, extended=True, meta=FetchMeta.EPISODES)
             if series.episodes is None:
                 raise ValueError("Found an episode in watched list for a series with no episodes")
