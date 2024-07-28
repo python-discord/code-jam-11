@@ -60,28 +60,24 @@ def run_gifs() -> None:
 
 
 def dev() -> None:
-    """Run format, lint, and the main application in sequence."""
-    run_command(["poetry", "run", "format"])
+    """Run lint and the main application in sequence."""
     run_command(["poetry", "run", "lint"])
     run_command(["poetry", "run", "run"])
 
 
 def dev_interactive() -> None:
-    """Run format, lint, and the interactive version of the application."""
-    run_command(["poetry", "run", "format"])
+    """Run lint and the interactive version of the application."""
     run_command(["poetry", "run", "lint"])
     run_command(["poetry", "run", "run-interactive"])
 
 
 def dev_discord_test() -> None:
-    """Run format, lint, and the Discord test version of the application."""
-    run_command(["poetry", "run", "format"])
+    """Run lint and the Discord test version of the application."""
     run_command(["poetry", "run", "lint"])
     run_command(["poetry", "run", "run-test"])
 
 
 def dev_gifs() -> None:
-    """Run format, lint, and the GIF generation version of the application."""
-    run_command(["poetry", "run", "format"])
+    """Run lint and the GIF generation version of the application."""
     run_command(["poetry", "run", "lint"])
     run_command(["poetry", "run", "run-gifs"])
