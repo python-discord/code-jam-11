@@ -159,6 +159,9 @@ class EcoCordClient(discord.Client):
 
     async def process_event(self, event: DiscordEvent) -> None:
         """Process a DiscordEvent by logging it and passing it to the corresponding ecosystem manager."""
+        if event.member.id == self.user.id:
+            return
+
         print(
             f"Event: {event.type.name} - {event.member.display_name} in {event.channel}: "
             f"{event.content} @ {event.timestamp}"
