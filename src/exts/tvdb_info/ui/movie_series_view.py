@@ -14,6 +14,7 @@ from src.db_adapters.lists import (
 from src.db_tables.user_list import UserList, UserListItemKind
 from src.settings import MOVIE_EMOJI, SERIES_EMOJI, THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
 from src.tvdb.client import Movie, Series
+from src.utils.iterators import get_first
 
 from ._media_view import MediaView
 from .episode_view import EpisodeView
@@ -189,9 +190,9 @@ class SeriesView(_SeriesOrMovieView):
         if self.media_data.episodes is None:
             return await super().is_watched()
 
-        last_ep = self.media_data.episodes[-1]
+        last_ep = get_first(episode for episode in reversed(self.media_data.episodes) if episode.aired)
 
-        if last_ep.id is None:
+        if not last_ep or last_ep.id is None:
             raise ValueError("Episode has no ID")
 
         item = await get_list_item(self.bot.db_session, self.watched_list, last_ep.id, UserListItemKind.EPISODE)
@@ -199,8 +200,8 @@ class SeriesView(_SeriesOrMovieView):
 
     @override
     async def set_watched(self, state: bool) -> None:
-        # When a series is marked as watched, we mark all of its episodes as watched.
-        # Similarly, unmarking will unmark all episodes.
+        # When a series is marked as watched, we mark all of its aired episodes as watched.
+        # Similarly, unmarking will unmark all episodes (aired or not).
 
         # If the series has no episodes, fall back to marking the season itself as watched / unwatched.
         if self.media_data.episodes is None:

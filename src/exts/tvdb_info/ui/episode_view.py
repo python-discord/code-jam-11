@@ -99,6 +99,8 @@ class EpisodeView(DynamicMediaView):
             self.season_dropdown.options = self.season_dropdown.options[:25]
             warnings.warn("Too many seasons to display, truncating to 25", UserWarning, stacklevel=1)
 
+        self.watched_button.set_state(await self.is_watched())
+
     @property
     def current_episode(self) -> "Episode":
         """Get the current episode being displayed."""

@@ -121,7 +121,7 @@ class ProfileView(ErrorHandledView):
             await Series.fetch(
                 media_db_data.tvdb_id, client=self.tvdb_client, extended=True, meta=FetchMeta.TRANSLATIONS
             )
-            for media_db_data in favorite_movies
+            for media_db_data in favorite_shows
         ]
         self.fetched_watched_movies = [
             await Movie.fetch(media_db_data.tvdb_id, client=self.tvdb_client) for media_db_data in watched_movies
