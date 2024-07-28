@@ -29,11 +29,18 @@ class _SeriesOrMovieView(MediaView):
         *,
         bot: Bot,
         user_id: int,
+        invoker_user_id: int,
         watched_list: UserList,
         favorite_list: UserList,
         media_data: Movie | Series,
     ) -> None:
-        super().__init__(bot=bot, user_id=user_id, watched_list=watched_list, favorite_list=favorite_list)
+        super().__init__(
+            bot=bot,
+            user_id=user_id,
+            invoker_user_id=invoker_user_id,
+            watched_list=watched_list,
+            favorite_list=favorite_list,
+        )
 
         self.media_data = media_data
 
@@ -140,6 +147,7 @@ class SeriesView(_SeriesOrMovieView):
         *,
         bot: Bot,
         user_id: int,
+        invoker_user_id: int,
         watched_list: UserList,
         favorite_list: UserList,
         media_data: Series,
@@ -147,6 +155,7 @@ class SeriesView(_SeriesOrMovieView):
         super().__init__(
             bot=bot,
             user_id=user_id,
+            invoker_user_id=invoker_user_id,
             watched_list=watched_list,
             favorite_list=favorite_list,
             media_data=media_data,
@@ -172,9 +181,13 @@ class SeriesView(_SeriesOrMovieView):
 
     async def _episodes_button_callback(self, interaction: discord.Interaction) -> None:
         """Callback for when the user clicks the "View Episodes" button."""
+        if not await self._ensure_correct_invoker(interaction):
+            return
+
         view = EpisodeView(
             bot=self.bot,
             user_id=self.user_id,
+            invoker_user_id=self.invoker_user_id,
             watched_list=self.watched_list,
             favorite_list=self.favorite_list,
             series=self.media_data,
@@ -250,6 +263,7 @@ class MovieView(_SeriesOrMovieView):
         *,
         bot: Bot,
         user_id: int,
+        invoker_user_id: int,
         watched_list: UserList,
         favorite_list: UserList,
         media_data: Movie,
@@ -257,6 +271,7 @@ class MovieView(_SeriesOrMovieView):
         super().__init__(
             bot=bot,
             user_id=user_id,
+            invoker_user_id=invoker_user_id,
             watched_list=watched_list,
             favorite_list=favorite_list,
             media_data=media_data,

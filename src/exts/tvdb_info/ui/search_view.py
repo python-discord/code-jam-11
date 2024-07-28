@@ -14,6 +14,7 @@ from .movie_series_view import MovieView, SeriesView
 def _search_view(
     bot: Bot,
     user_id: int,
+    invoker_user_id: int,
     watched_list: UserList,
     favorite_list: UserList,
     results: Sequence[Movie | Series],
@@ -25,6 +26,7 @@ def _search_view(
         view = MovieView(
             bot=bot,
             user_id=user_id,
+            invoker_user_id=invoker_user_id,
             watched_list=watched_list,
             favorite_list=favorite_list,
             media_data=result,
@@ -33,6 +35,7 @@ def _search_view(
         view = SeriesView(
             bot=bot,
             user_id=user_id,
+            invoker_user_id=invoker_user_id,
             watched_list=watched_list,
             favorite_list=favorite_list,
             media_data=result,
@@ -56,12 +59,15 @@ def _search_view(
     )
 
     async def _search_dropdown_callback(interaction: discord.Interaction) -> None:
+        if not await view._ensure_correct_invoker(interaction):  # pyright: ignore[reportPrivateUsage]
+            return
+
         if not search_result_dropdown.values or not isinstance(search_result_dropdown.values[0], str):
             raise ValueError("Dropdown values are empty or not a string but callback was triggered.")
 
         index = int(search_result_dropdown.values[0])
-        view = _search_view(bot, user_id, watched_list, favorite_list, results, index)
-        await view.send(interaction)
+        new_view = _search_view(bot, user_id, invoker_user_id, watched_list, favorite_list, results, index)
+        await new_view.send(interaction)
 
     search_result_dropdown.callback = _search_dropdown_callback
 
@@ -69,7 +75,12 @@ def _search_view(
     return view
 
 
-async def search_view(bot: Bot, user_id: int, results: Sequence[Movie | Series]) -> MovieView | SeriesView:
+async def search_view(
+    bot: Bot,
+    user_id: int,
+    invoker_user_id: int,
+    results: Sequence[Movie | Series],
+) -> MovieView | SeriesView:
     """Construct a view showing the search results.
 
     This uses specific views to render a single result. This view is then modified to
@@ -81,4 +92,4 @@ async def search_view(bot: Bot, user_id: int, results: Sequence[Movie | Series])
     await refresh_list_items(bot.db_session, watched_list)
     await refresh_list_items(bot.db_session, favorite_list)
 
-    return _search_view(bot, user_id, watched_list, favorite_list, results, 0)
+    return _search_view(bot, user_id, invoker_user_id, watched_list, favorite_list, results, 0)

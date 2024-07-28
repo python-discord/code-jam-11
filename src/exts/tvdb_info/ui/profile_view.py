@@ -35,6 +35,7 @@ class ProfileView(ErrorHandledView):
         bot: Bot,
         tvdb_client: TvdbClient,
         user: discord.User,
+        invoker_user_id: int,
         watched_list: UserList,
         favorite_list: UserList,
     ) -> None:
@@ -42,6 +43,7 @@ class ProfileView(ErrorHandledView):
         self.bot = bot
         self.tvdb_client = tvdb_client
         self.discord_user = user
+        self.invoker_user_id = invoker_user_id
         self.watched_list = watched_list
         self.favorite_list = favorite_list
 
@@ -150,6 +152,16 @@ class ProfileView(ErrorHandledView):
         # Instead of fetching all episodes, just store the total number of episodes that the user has added
         # as that's the only thing we need here and while it is a bit inconsistent, it's a LOT more efficient.
         self.episodes_total = len(watched_episodes)
+
+    async def _ensure_correct_invoker(self, interaction: discord.Interaction) -> bool:
+        """Ensure that the interaction was invoked by the author of this view."""
+        if interaction.user is None:
+            raise ValueError("Interaction user is None")
+
+        if interaction.user.id != self.invoker_user_id:
+            await interaction.response.send_message("You can't interact with this view.", ephemeral=True)
+            return False
+        return True
 
     def _get_embed(self) -> discord.Embed:
         embed = discord.Embed(
