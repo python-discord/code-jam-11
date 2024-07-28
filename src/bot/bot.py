@@ -41,9 +41,7 @@ class EcoCordClient(discord.Client):
         print(f"Logged in as {self.user} (ID: {self.user.id})")
 
         for guild in self.guilds:
-            self.loop.create_task(
-                self.safe_task(lambda g=guild: self.tree.sync(guild=g), f"sync_commands for {guild.name}")
-            )
+            await self.tree.sync(guild=guild)
             await self.initialize_guild(guild)
 
     async def initialize_guild(self, guild: discord.Guild) -> None:
@@ -72,37 +70,6 @@ class EcoCordClient(discord.Client):
                 # Call reconfigure_channels here with the channels from the config
                 channels = [guild.get_channel(channel_id) for channel_id in config.allowed_channels]
                 await self.reconfigure_channels(guild.id, channels)
-
-        # Start the task to update online critters
-        self.loop.create_task(
-            self.safe_task(self.update_online_critters(guild), f"update_online_critters for {guild.name}")
-        )
-
-    async def update_online_critters(self, guild: discord.Guild) -> None:
-        """Periodically update online critters for all ecosystem managers in the guild."""
-        while True:
-            try:
-                online_members = [member for member in guild.members if member.status != discord.Status.offline]
-
-                if guild.id not in self.guilds_data:
-                    print(f"Guild data not found for {guild.name} (ID: {guild.id})")
-                    await asyncio.sleep(5)
-                    continue
-
-                ecosystem_managers = self.guilds_data[guild.id]["ecosystem_managers"]
-
-                # Fetch UserInfo for all online members
-                online_members_info: list[UserInfo] = []
-                for member in online_members:
-                    user_info = await self.get_user_info(member)
-                    online_members_info.append(user_info)
-
-                for ecosystem_manager in ecosystem_managers.values():
-                    ecosystem_manager.set_online_critters(online_members_info)
-            except Exception as e:  # noqa: BLE001
-                print(f"Error in update_online_critters for guild {guild.name}: {e!s}")
-
-            await asyncio.sleep(5)
 
     async def on_message(self, message: discord.Message) -> None:
         """Event receiver for when a message is sent in a visible channel.
