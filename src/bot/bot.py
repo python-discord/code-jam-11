@@ -11,7 +11,7 @@ import discord
 from discord import app_commands
 
 from ecosystem import EcosystemManager
-from storage.models import Database, GuildConfig, UserInfo, event_db_builder
+from storage.models import Database, GuildConfig, UserInfo
 
 from .discord_event import DiscordEvent, EventType, SerializableMember
 from .settings import BOT_TOKEN
@@ -225,8 +225,6 @@ class EcoCordClient(discord.Client):
             if ecosystem_manager:
                 user_info = await self.get_user_info(event.member)
                 ecosystem_manager.process_event(event, user_info)
-            db_event = await event_db_builder(event)
-            await self.database.insert_event(db_event)
 
     async def start_ecosystems(self, guild_id: int, channels: list[discord.TextChannel] | None = None) -> None:
         """Initialize and start ecosystem managers for specified channels."""

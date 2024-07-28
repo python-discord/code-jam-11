@@ -1,34 +1,9 @@
-import json
 import logging
-import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 
 import aiosqlite
-
-from bot.discord_event import DiscordEvent
-
-
-@dataclass
-class DBEvent:
-    """Represents a database event."""
-
-    event_type: str
-    timestamp: int
-    guild_id: int
-    channel_id: int
-    member_id: int
-    message_id: int | None
-    content: str | None
-
-
-class EventTypeEnum(str, Enum):
-    """Enum for event types."""
-
-    MESSAGE = "message"
-    TYPING = "typing"
-    REACTION = "reaction"
 
 
 class CommandType(str, Enum):
@@ -46,15 +21,6 @@ class GuildConfig:
     guild_id: int
     allowed_channels: list[int]
     gif_channel: int | None
-
-
-@dataclass
-class EcosystemState:
-    """Represents the ecosystem state."""
-
-    guild_id: int
-    cloud_image_id: str
-    state_data: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -102,29 +68,10 @@ class Database:
         try:
             async with aiosqlite.connect(self.db_file_path) as db:
                 await db.execute("""
-                    CREATE TABLE IF NOT EXISTS events (
-                        id TEXT NOT NULL PRIMARY KEY,
-                        guild_id INT NOT NULL,
-                        event_type TEXT NOT NULL,
-                        timestamp INT NOT NULL,
-                        channel_id INT NOT NULL,
-                        member_id INT NOT NULL,
-                        message_id TEXT,
-                        content TEXT
-                    )
-                """)
-                await db.execute("""
                     CREATE TABLE IF NOT EXISTS guild_config (
                         guild_id INTEGER PRIMARY KEY,
                         allowed_channels TEXT NOT NULL,
                         gif_channel INTEGER
-                    )
-                """)
-                await db.execute("""
-                    CREATE TABLE IF NOT EXISTS ecosystem_state (
-                        guild_id INTEGER PRIMARY KEY,
-                        cloud_image_id TEXT NOT NULL,
-                        state_data TEXT NOT NULL
                     )
                 """)
                 await db.execute("""
@@ -175,49 +122,6 @@ class Database:
             self.logger.exception("Database error (%s)", command.value)
             raise
 
-    async def insert_event(self, event: DBEvent) -> None:
-        query = """
-        INSERT INTO events(id, guild_id, event_type, timestamp, channel_id, member_id, message_id, content)
-        VALUES(?,?,?,?,?,?,?,?)
-        """
-        data = (
-            str(uuid.uuid4()),
-            event.guild_id,
-            event.event_type,
-            event.timestamp,
-            event.channel_id,
-            event.member_id,
-            event.message_id,
-            event.content,
-        )
-        await self.execute(command=CommandType.INSERT, query=query, parameters=data)
-
-    async def get_events_by_guild(self, guild_id: int, start_time: int, stop_time: int) -> list[DBEvent]:
-        """Retrieve events for a specific guild within a specified time range.
-
-        Args:
-        ----
-            guild_id (int): The ID of the guild.
-            start_time (int): The start timestamp.
-            stop_time (int): The end timestamp.
-
-        Returns:
-        -------
-            list[DBEvent]: A list of DBEvent objects.
-
-        """
-        query = """
-        SELECT event_type, timestamp, guild_id, channel_id, member_id, message_id, content
-        FROM events
-        WHERE guild_id = ? AND timestamp BETWEEN ? AND ?
-        """
-        async with (
-            aiosqlite.connect(self.db_file_path) as db,
-            db.execute(query, (guild_id, start_time, stop_time)) as cursor,
-        ):
-            rows = await cursor.fetchall()
-            return [DBEvent(*row) for row in rows]
-
     async def set_guild_config(self, config: GuildConfig) -> None:
         """Set or update the configuration for a guild."""
         query = """
@@ -241,31 +145,6 @@ class Database:
                 guild_id, allowed_channels_str, gif_channel = row
                 allowed_channels = list(map(int, allowed_channels_str.split(",")))
                 return GuildConfig(guild_id, allowed_channels, gif_channel)
-            return None
-
-    async def save_ecosystem_state(self, state: EcosystemState) -> None:
-        """Save or update the ecosystem state for a guild."""
-        query = """
-        INSERT OR REPLACE INTO ecosystem_state (guild_id, cloud_image_id, state_data)
-        VALUES (?, ?, ?)
-        """
-        state_data_json = json.dumps(state.state_data)
-        data = (state.guild_id, state.cloud_image_id, state_data_json)
-        await self.execute(command=CommandType.INSERT, query=query, parameters=data)
-
-    async def get_ecosystem_state(self, guild_id: int) -> EcosystemState | None:
-        """Retrieve the ecosystem state for a specific guild."""
-        query = """
-        SELECT guild_id, cloud_image_id, state_data
-        FROM ecosystem_state
-        WHERE guild_id = ?
-        """
-        async with aiosqlite.connect(self.db_file_path) as db, db.execute(query, (guild_id,)) as cursor:
-            row = await cursor.fetchone()
-            if row:
-                guild_id, cloud_image_id, state_data_json = row
-                state_data = json.loads(state_data_json)
-                return EcosystemState(guild_id, cloud_image_id, state_data)
             return None
 
     async def get_user_info(self, user_id: int, guild_id: int) -> UserInfo | None:
@@ -321,27 +200,3 @@ class Database:
                     last_updated=datetime.fromisoformat(row[4]),
                 )
             return None
-
-
-async def event_db_builder(event: DiscordEvent) -> DBEvent:
-    """Build a DBEvent from a DiscordEvent.
-
-    Args:
-    ----
-        event (DiscordEvent): The Discord event to convert.
-
-    Returns:
-    -------
-        DBEvent: The converted database event.
-
-    """
-    message_id = event.message.id if event.type in {EventTypeEnum.MESSAGE, EventTypeEnum.REACTION} else None
-    return DBEvent(
-        event_type=event.type.value,
-        timestamp=event.timestamp.timestamp().__round__(),
-        guild_id=event.guild.id,
-        channel_id=event.channel.id,
-        member_id=event.member.id,
-        message_id=message_id,
-        content=event.content,
-    )
