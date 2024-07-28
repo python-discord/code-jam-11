@@ -12,14 +12,11 @@ from src.db_adapters.lists import (
     refresh_list_items,
 )
 from src.db_tables.user_list import UserList, UserListItemKind
-from src.settings import THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
+from src.settings import MOVIE_EMOJI, SERIES_EMOJI, THETVDB_COPYRIGHT_FOOTER, THETVDB_LOGO
 from src.tvdb.client import Movie, Series
 
 from ._media_view import MediaView
 from .episode_view import EpisodeView
-
-MOVIE_EMOJI = "🎬"
-SERIES_EMOJI = "📺"
 
 
 class _SeriesOrMovieView(MediaView):

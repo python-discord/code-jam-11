@@ -6,6 +6,7 @@ import discord
 from src.bot import Bot
 from src.db_adapters import refresh_list_items, user_get_list_safe, user_get_safe
 from src.db_tables.user_list import UserList, UserListItem, UserListItemKind
+from src.settings import MOVIE_EMOJI, SERIES_EMOJI
 from src.tvdb import Movie, Series
 from src.tvdb.client import Episode, TvdbClient
 from src.utils.log import get_logger
@@ -14,9 +15,6 @@ if TYPE_CHECKING:
     from src.db_tables.user import User
 
 log = get_logger(__name__)
-
-MOVIE_EMOJI = "🎬"
-SERIES_EMOJI = "📺"
 
 
 @final

@@ -12,6 +12,8 @@ DB_ALWAYS_MIGRATE = get_config("DB_ALWAYS_MIGRATE", cast=bool, default=False)
 
 FAIL_EMOJI = "❌"
 SUCCESS_EMOJI = "✅"
+MOVIE_EMOJI = "🎬"
+SERIES_EMOJI = "📺"
 GROUP_EMOJI = get_config("GROUP_EMOJI", default=":file_folder:")
 COMMAND_EMOJI = get_config("COMMAND_EMOJI", default=":arrow_forward:")
 
