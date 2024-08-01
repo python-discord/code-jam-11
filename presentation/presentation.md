@@ -5,11 +5,11 @@ footer: "Authors: ItsDrike, Benji, Paillat-dev, Ash8121"
 class: invert
 ---
 
-# Name <!-- fit -->
+# Lumina Tracker <!-- fit -->
 
 ---
 
-<Name> is a discord bot that allows you to keep track of the TV shows and movies that you have watched. You can use it to search for and see various information about the shows/movies you're interested in, but also to mark individual movies or show episodes as watched or favorite.
+**Lumina Tracker** is a discord bot that allows you to keep track of the TV shows and movies that you have watched. You can use it to search for and see various information about the shows/movies you're interested in, but also to mark individual movies or show episodes as watched or favorite.
 
 The bot then allows anyone to take a look at your profile, to see what you have watched, alongside with some neat statistics like the total number of episodes, shows and movies that you have tracked.
 
@@ -23,7 +23,7 @@ We decided to use TheTVDB service as the base for our bot. It's a massive databa
 
 ## Features
 
-<Name> can be used with discord application commands, and has two main commands:
+Lumina Tracker can be used with discord application commands, and has two main commands:
 
 - `/search` to search for a TV show or a movie
 - `/profile` to view your (or someone else's) profile
@@ -95,7 +95,7 @@ The profile interface displays the user's profile. It contains the amount of TV 
 
 ### Additional features
 
-<Name> also has some additional features:
+Lumina Tracker also has some additional features:
 
 - A `/help` command to display a list of all available commands
 - A `/ping` command to check if the bot is online and its latency
@@ -109,7 +109,7 @@ The profile interface displays the user's profile. It contains the amount of TV 
 <!-- TODO: This is too long-->
 
 ![bg right 80%](img/img_5.png)
-<Name> also has a custom rate limiting system, both global and per user, to avoid spamming the bot with requests. Alongside that, we also added a cache system to store the results from TheTVDB and avoid flooding the api with the same requests.
+Lumina Tracker also has a custom rate limiting system, both global and per user, to avoid spamming the bot with requests. Alongside that, we also added a cache system to store the results from TheTVDB and avoid flooding the api with the same requests.
 
 Even though we did not find any information about rate limits in the documentation for TheTVDB API, we didn't want to abuse that fact and took the safer approach.
 
@@ -117,7 +117,7 @@ Even though we did not find any information about rate limits in the documentati
 
 ### Additional features
 
-At last, <Name> has a built-in error handler to catch and show well formatted error messages to the user, directing them to the GitHub repository where they can report the issue, instead of letting the command fail silently.
+At last, Lumina Tracker has a built-in error handler to catch and show well formatted error messages to the user, directing them to the GitHub repository where they can report the issue, instead of letting the command fail silently.
 
 ---
 
@@ -181,7 +181,7 @@ docker-compose up -d
 
 ## Theme
 
-Our project, <Name>, was created with the theme of the jam in mind: _Information Overload_.
+Our project, Lumina Tracker, was created with the theme of the jam in mind: _Information Overload_.
 
 All of us have probably watched a bunch of different shows and movies, but after a while, keeping track of everything that you've seen can get quite overwhelming.
 
