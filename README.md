@@ -254,7 +254,7 @@ All team members contributed to the initial project planning and ideation. Speci
 * Provided valuable testing support
 * Sourced the cloud assets used in the background from [Free Sky with Clouds Background Pixel Art Set](https://free-game-assets.itch.io/free-sky-with-clouds-background-pixel-art-set)
 
-[ShadowDogger](https://github.com/ShadowDogger) and [tinoy-t](https://github.com/tinoy-t)
+[ShadowDogger](https://github.com/ShadowDogger) and [Tinoy](https://github.com/tinoy-t)
 * Participated in brainstorming sessions
 * Offered insights and suggestions during the planning phase
 
