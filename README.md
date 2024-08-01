@@ -54,6 +54,15 @@ docker compose -f ./docker-compose.local.yaml up
 > Note that you will still need to create a `.env` file with all of the configuration variables (see [the configuring
 > section](#configuring-the-bot))
 
+> [!NOTE]
+> By default, the docker container will always use a brand new database. If you wish to persist the database across
+> runs, make sure to modify the docker-compose file and mount the database file. In the container, this file will by
+> default use the `/app/database.db` path. You can either mount this file from a [docker volume][docker-volumes] or
+> from your file-system using a [bind mount][docker-bind-mount].
+
+[docker-volumes]: https://docs.docker.com/storage/volumes/#use-a-volume-with-docker-compose
+[docker-bind-mount]: https://docs.docker.com/storage/bind-mounts/#use-a-bind-mount-with-compose
+
 ## Configuring the bot
 
 The bot is configured using environment variables. You can either create a `.env` file and define these variables
