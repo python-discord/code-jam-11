@@ -105,11 +105,12 @@ Lumina Tracker also has some additional features:
 ---
 
 ### Additional features
-
-<!-- TODO: This is too long-->
-
-![bg right 80%](img/img_5.png)
+![bg right 80 %](img/img_5.png)
 Lumina Tracker also has a custom rate limiting system, both global and per user, to avoid spamming the bot with requests. Alongside that, we also added a cache system to store the results from TheTVDB and avoid flooding the api with the same requests.
+
+---
+### Additional features
+![bg right 80%](img/img_5.png)
 
 Even though we did not find any information about rate limits in the documentation for TheTVDB API, we didn't want to abuse that fact and took the safer approach.
 
