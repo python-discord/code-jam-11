@@ -43,14 +43,14 @@ You also have access to two more (optional) options:
 
 #### Search interface
 
-![bg right 80%](img.png)
+![bg right 80%](img/img.png)
 The search interface responds with a message consisting of two or three buttons, depending on the type of media you are searching for, and a dropdown menu.
 
 ---
 
 #### Search interface - result picker
 
-![bg right 80%](img_1.png)
+![bg right 80%](img/img_1.png)
 The dropdown allows you to quickly switch to another of the top 5 results, and the buttons allow you to mark the result as watched, favorite it, or in case of a TV show, view the episodes.
 
 This menu is only shown if there was more than 1 result found for the query.
@@ -59,7 +59,7 @@ This menu is only shown if there was more than 1 result found for the query.
 
 #### Search interface - buttons
 
-![bg right 80%](img_2.png)
+![bg right 80%](img/img_2.png)
 The buttons are interactive, and you can click on them to perform the action you want, such as marking a TV show as watched or adding it to your favorites list.
 
 <!-- TODO: This note is quite close to the end of the page, maybe decrease the font size? -->
@@ -70,7 +70,7 @@ The buttons are interactive, and you can click on them to perform the action you
 
 #### Episodes interface
 
-![bg right 80%](img_3.png)
+![bg right 80%](img/img_3.png)
 The episode interface is displayed when you click on the **View Episodes** button in the search interface. Like the search interface, it provides a _Mark as watched_ button, so that you can track episodes individually.
 
 To choose between episodes, there are two dropdown menus, first for picking the seasons and second for the episode.
@@ -88,7 +88,7 @@ It has one (optional) option:
 
 #### Profile interface
 
-![bg right 80%](img_4.png)
+![bg right 80%](img/img_4.png)
 The profile interface displays the user's profile. It contains the amount of TV shows, movies and episodes watched, and a list with the shows marked as watched / favorite. It does not provide any interactive elements, as it is only meant to display information, but you can click on any show's link to view more information about it on TheTVDB.
 
 ---
@@ -108,7 +108,7 @@ The profile interface displays the user's profile. It contains the amount of TV 
 
 <!-- TODO: This is too long-->
 
-![bg right 80%](img_5.png)
+![bg right 80%](img/img_5.png)
 <Name> also has a custom rate limiting system, both global and per user, to avoid spamming the bot with requests. Alongside that, we also added a cache system to store the results from TheTVDB and avoid flooding the api with the same requests.
 
 Even though we did not find any information about rate limits in the documentation for TheTVDB API, we didn't want to abuse that fact and took the safer approach.
