@@ -13,7 +13,7 @@ To run the bot, you'll first want to install all of the project's dependencies. 
 it.
 
 To install the dependencies, you can run the `poetry install` command. If you only want to run the bot and you're not
-interested in also developing / contributing, you can also run `poetry install --only-root`, which will skip the
+interested in also developing / contributing, you can also run `poetry install --only main`, which will skip the
 development dependencies (tools for linting and testing).
 
 Once done, you will want to activate the virtual environment that poetry has just created for the project. To do so,
