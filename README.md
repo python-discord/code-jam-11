@@ -52,7 +52,7 @@ docker compose -f ./docker-compose.local.yaml up
 
 > [!IMPORTANT]
 > Note that you will still need to create a `.env` file with all of the configuration variables (see [the configuring
-> section](#configuring-the-bot)
+> section](#configuring-the-bot))
 
 ## Configuring the bot
 
