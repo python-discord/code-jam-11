@@ -1,184 +1,261 @@
-# Python Discord Code Jam Repository Template
+# EcoCord: A Discord Ecosystem Simulator
 
-## A primer
+![EcoCord Logo](assets/readme/logo.png)
 
-Hello code jam participants! We've put together this repository template for you to use in [our code jams](https://pythondiscord.com/events/) or even other Python events!
+Welcome to EcoCord, an innovative Discord bot that transforms your server's activity into a living, breathing ecosystem! Created for the Python Code Jam 2024 with the theme of "Information Overload," EcoCord turns the constant stream of messages, reactions, and user interactions into a vibrant, visual representation of your community's digital life.
 
-This document contains the following information:
+## What is EcoCord?
 
-1. [What does this template contain?](#what-does-this-template-contain)
-2. [How do I use this template?](#how-do-i-use-this-template)
-3. [How do I adapt this template to my project?](#how-do-i-adapt-this-template-to-my-project)
+EcoCord is a unique Discord bot that creates a dynamic ecosystem based on your server's activity. It visualizes user interactions as various creatures in a simulated environment, bringing your community to life in a whole new way!
 
-> [!TIP]
-> You can also look at [our style guide](https://pythondiscord.com/events/code-jams/code-style-guide/) to get more information about what we consider a maintainable code style.
+![EcoCord in Action](assets/readme/demo.gif)
 
-## What does this template contain?
+### Key Features:
 
-Here is a quick rundown of what each file in this repository contains:
+- **Real-time Ecosystem Visualization**: Watch as your server's activity is transformed into a lively ecosystem with birds, snakes, and frogs representing active users.
+- **Activity-based Interactions**: The more active your server, the more vibrant and diverse the ecosystem becomes!
+- **User Avatars**: See your community members represented as cute critters with their own avatars.
+- **Word Clouds**: Popular topics and frequently used words appear as dynamic word clouds in the sky.
+- **Reaction Emojis**: Watch as reaction emojis float across the screen, adding extra flair to your ecosystem.
+- **GIF Generation**: Automatically generate and share GIFs of your server's ecosystem in action.
 
-- [`LICENSE.txt`](LICENSE.txt): [The MIT License](https://opensource.org/licenses/MIT), an OSS approved license which grants rights to everyone to use and modify your project, and limits your liability. We highly recommend you to read the license.
-- [`.gitignore`](.gitignore): A list of files and directories that will be ignored by Git. Most of them are auto-generated or contain data that you wouldn't want to share publicly.
-- [`requirements-dev.txt`](requirements-dev.txt): Every PyPI package used for the project's development, to ensure a common development environment. More on that [below](#using-the-default-pip-setup).
-- [`pyproject.toml`](pyproject.toml): Configuration and metadata for the project, as well as the linting tool Ruff. If you're interested, you can read more about `pyproject.toml` in the [Python Packaging documentation](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/).
-- [`.pre-commit-config.yaml`](.pre-commit-config.yaml): The configuration of the [pre-commit](https://pre-commit.com/) tool.
-- [`.github/workflows/lint.yaml`](.github/workflows/lint.yaml): A [GitHub Actions](https://github.com/features/actions) workflow, a set of actions run by GitHub on their server after each push, to ensure the style requirements are met.
+## How It Works
 
-Each of these files have comments for you to understand easily, and modify to fit your needs.
+EcoCord listens to various events in your Discord server:
 
-### Ruff: general style rules
+1. **Messages**: Each message spawns or activates a critter in the ecosystem.
+2. **Reactions**: Emojis used in reactions appear and animate in the environment.
+3. **Typing**: Users typing are represented by their critters becoming more active.
 
-Our first tool is Ruff. It will check your codebase and warn you about any non-conforming lines.
-It is run with the command `ruff check` in the project root.
+As these events occur, the ecosystem evolves:
 
-Here is a sample output:
+- Critters move around, interact, and respond to the overall activity level.
+- Word clouds form and dissipate based on message content.
 
-```shell
-$ ruff check
-app.py:1:5: N802 Function name `helloWorld` should be lowercase
-app.py:1:5: ANN201 Missing return type annotation for public function `helloWorld`
-app.py:2:5: D400 First line should end with a period
-app.py:2:5: D403 First word of the first line should be capitalized: `docstring` -> `Docstring`
-app.py:3:15: W292 No newline at end of file
-Found 5 errors.
-```
+### Critter Types
 
-Each line corresponds to an error. The first part is the file path, then the line number, and the column index.
-Then comes the error code, a unique identifier of the error, and then a human-readable message.
+EcoCord features three main types of critters, each with unique behaviors and representations:
 
-If, for any reason, you do not wish to comply with this specific error on a specific line, you can add `# noqa: CODE` at the end of the line.
-For example:
+1. **Birds**:
+   - Fly smoothly across the sky
+   - Change direction randomly
+   - Flap their wings as they move
+
+2. **Snakes**:
+   - Slither along the ground
+   - Move in a sinusoidal pattern
+   - Grow longer as they become more active
+
+3. **Frogs**:
+   - Hop around the lower part of the ecosystem
+   - Have distinct rest and jump states
+   - Scale in size based on their vertical position
+
+Each critter type is designed to represent different aspects of user activity and add variety to the ecosystem visualization.
+
+## Technical Challenges
+
+EcoCord overcomes several technical challenges to create a seamless and engaging experience:
+
+1. **GIF Generation and Multithreading**:
+   - Utilizes a separate process for GIF generation to avoid blocking the main application
+   - Implements a shared memory approach using `multiprocessing.Array` for efficient frame sharing between processes
+   - Manages concurrent access to shared resources with locks and queues
+   - Generates GIFs in under 1s on typical hardware
+
+2. **SQLite Database Integration**:
+   - Uses `aiosqlite` for asynchronous database operations
+   - Stores and retrieves guild configurations and user information
+
+3. **Efficient Rendering with Pygame**:
+   - Optimizes drawing operations to handle multiple moving entities
+   - Implements custom drawing algorithms for each critter type
+   - Manages transparency and layering for complex visual effects
+   - Parallax scrolling of background clouds to add depth to the ecosystem
+
+4. **Discord API Integration**:
+   - Handles real-time events from Discord using `discord.py`
+   - Manages rate limits and connection issues gracefully
+   - Implements command handling and permission checks for bot configuration
+
+5. **Dynamic Word Cloud Generation**:
+   - Processes message content in real-time to extract relevant words
+   - Generates and updates word clouds based on frequently used terms
+   - Integrates word clouds seamlessly into the ecosystem visualization with masking
+
+6. **Avatar Integration and Image Processing**:
+   - Fetches and processes user avatars from Discord
+   - Applies masks and transformations to integrate avatars with critter designs
+   - Handles various image formats and sizes efficiently
+
+These technical solutions work together to create a responsive, visually appealing, and interactive ecosystem that accurately represents the activity in your Discord server.
+
+## Connection to the Theme: Information Overload
+
+EcoCord tackles the theme of "Information Overload" by:
+
+1. **Visualizing Data**: Transforming the overwhelming stream of Discord messages and events into a visually appealing and easily digestible format.
+2. **Aggregating Information**: Combining multiple data points (messages, reactions, user activity) into a single, coherent representation.
+3. **Dynamic Adaptation**: The ecosystem evolves based on the volume and type of information, providing a real-time view of server activity.
+4. **Filtering and Focusing**: By representing users as critters and popular topics as word clouds, EcoCord helps users focus on key information amidst the noise.
+
+## Innovation Spotlight
+
+EcoCord stands out in addressing "Information Overload" through its unique approach:
+
+1. **Dynamic Visualization**: We transform raw data into an engaging, living ecosystem.
+2. **Intelligent Aggregation**: Our algorithm combines multiple data points to create meaningful representations.
+3. **Scalability**: EcoCord efficiently handles high-volume servers without performance degradation.
+
+### Key Innovation: Efficient GIF Generation
+
+Our multithreaded GIF generation process is a standout feature:
 
 ```python
-def helloWorld():  # noqa: N802
-    ...
+@staticmethod
+async def _gif_generation_process(
+    shared_frames: SharedNumpyArray,
+    current_frame_index: multiprocessing.Value,
+    frame_count_queue: multiprocessing.Queue,
+    gif_info_queue: multiprocessing.Queue,
+    fps: int,
+) -> None:
+    frames = shared_frames.get_array()
 
+    with ThreadPoolExecutor() as executor:
+        while True:
+            frame_count = frame_count_queue.get()
+            if frame_count is None:
+                break
+
+            start_index = current_frame_index.value
+            ordered_frames = np.roll(frames, -start_index, axis=0)
+
+            frames = list(executor.map(Image.fromarray, ordered_frames))
+
+            duration = int(1000 / fps)
+
+            with io.BytesIO() as gif_buffer:
+                optimized_frames[0].save(
+                    gif_buffer,
+                    format="GIF",
+                    save_all=True,
+                    append_images=frames[1:],
+                    optimize=False,
+                    duration=[duration] * (len(frames)),
+                    loop=0,
+                )
+
+                gif_data = gif_buffer.getvalue()
+
+            gif_info_queue.put((gif_data, time.time()))
 ```
 
-This will ignore the function naming issue and pass linting.
+This approach allows us to generate high-quality GIFs efficiently, even for servers with thousands of messages per minute. Key features include:
 
-> [!WARNING]
-> We do not recommend ignoring errors unless you have a good reason to do so.
+1. Asynchronous processing using `asyncio`
+2. Shared memory for frame data using `SharedNumpyArray`
+3. Multithreading for frame optimization
+4. Efficient frame ordering and GIF creation
 
-### Ruff: formatting
+## Getting Started
 
-Ruff also comes with a formatter, which can be run with the command `ruff format`.
-It follows the same code style enforced by [Black](https://black.readthedocs.io/en/stable/index.html), so there's no need to pick between them.
+### Prerequisites
 
-### Pre-commit: run linting before committing
+- Python 3.12
+- Poetry (for dependency management)
+- A Discord Bot Token
 
-The second tool doesn't check your code, but rather makes sure that you actually *do* check it.
+### Installation
 
-It makes use of a feature called [Git hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) which allow you to run a piece of code before running `git commit`.
-The good thing about it is that it will cancel your commit if the lint doesn't pass. You won't have to wait for GitHub Actions to report issues and have a second fix commit.
+1. Clone the repository:
+   ```
+   git clone https://github.com/ardent-andromedas/python-code-jam-2024.git
+   cd ecocord
+   ```
 
-It is *installed* by running `pre-commit install` and can be run manually by calling only `pre-commit`.
+2. Install dependencies using Poetry:
+   ```
+   poetry install
+   ```
 
-[Lint before you push!](https://soundcloud.com/lemonsaurusrex/lint-before-you-push)
+3. Set up your environment variables:
+   Create a `.env` file in the project root and add your Discord bot token:
+   ```
+   BOT_TOKEN=<YOUR BOT TOKEN>
+   ```
 
-#### List of hooks
+### Running EcoCord
 
-- `check-toml`: Lints and corrects your TOML files.
-- `check-yaml`: Lints and corrects your YAML files.
-- `end-of-file-fixer`: Makes sure you always have an empty line at the end of your file.
-- `trailing-whitespace`: Removes whitespaces at the end of each line.
-- `ruff`: Runs the Ruff linter.
-- `ruff-format`: Runs the Ruff formatter.
+1. Start the bot:
+   ```
+   poetry run run
+   ```
 
-## How do I use this template?
+2. Invite the bot to your Discord server using the OAuth2 URL generated for your bot in the Discord Developer Portal.
 
-### Creating your team repository
+The bot should be configured for a Guild Install, with the `applications.commands` and `bot` scopes, and `Attach Files`, `Create Public Threads`, `Embed Links`, `Read Message History`, `Send Messages`, `Send Messages in Threads`, `Use Slash Commands`, and `View Channels` permissions.
 
-One person in the team, preferably the leader, will have to create the repository and add other members as collaborators.
+3. Use the `/configure` command in your server to set up the channels where EcoCord will operate.
 
-1. In the top right corner of your screen, where **Clone** usually is, you have a **Use this template** button to click.
-   ![use-this-template-button](https://docs.github.com/assets/images/help/repository/use-this-template-button.png)
-2. Give the repository a name and a description.
-   ![create-repository-name](https://docs.github.com/assets/images/help/repository/create-repository-name.png)
-3. Click **Create repository from template**.
-4. Click **Settings** in your newly created repository.
-   ![repo-actions-settings](https://docs.github.com/assets/images/help/repository/repo-actions-settings.png)
-5. In the "Access" section of the sidebar, click **Collaborators**.
-   ![collaborators-settings](https://github.com/python-discord/code-jam-template/assets/63936253/c150110e-d1b5-4e4d-93e0-0a2cf1de352b)
-6. Click **Add people**.
-7. Insert the names of each of your teammates, and invite them. Once they have accepted the invitation in their email, they will have write access to the repository.
 
-You are now ready to go! Sit down, relax, and wait for the kickstart!
+## Configuration
 
-> [!IMPORTANT]
-> Don't forget to swap "Python Discord" in the [`LICENSE.txt`](LICENSE.txt) file for the name of each of your team members or the name of your team *after* the start of the code jam.
+To set up EcoCord in your server, use the `/configure` command. This command allows you to specify which channels the bot should monitor and where it should post ecosystem GIFs.
 
-### Using the default pip setup
+![Configure Command](assets/readme/configure.png)
 
-Our default setup includes a bare requirements file to be used with a [virtual environment](https://docs.python.org/3/library/venv.html).
-We recommend this if you have never used any other dependency manager, although if you have, feel free to switch to it. More on that [below](#how-do-i-adapt-this-template-to-my-project).
+The configuration options include:
 
-#### Creating the environment
+- **Ecosystem Channel**: The channel where EcoCord will monitor activity and generate the ecosystem.
+- **GIF Channel**: The channel where EcoCord will post generated GIFs of the ecosystem.
 
-Create a virtual environment in the folder `.venv`.
+After running the `/configure` command, follow the prompts to select the appropriate channels. EcoCord will then start monitoring the specified ecosystem channel and post GIFs in the designated GIF channel.
 
-```shell
-python -m venv .venv
-```
 
-#### Entering the environment
+## Usage
 
-It will change based on your operating system and shell.
+Once EcoCord is running in your server, it will automatically start creating and updating the ecosystem based on server activity. Here are some key commands and features:
 
-```shell
-# Linux, Bash
-$ source .venv/bin/activate
-# Linux, Fish
-$ source .venv/bin/activate.fish
-# Linux, Csh
-$ source .venv/bin/activate.csh
-# Linux, PowerShell Core
-$ .venv/bin/Activate.ps1
-# Windows, cmd.exe
-> .venv\Scripts\activate.bat
-# Windows, PowerShell
-> .venv\Scripts\Activate.ps1
-```
+- `/configure`: Set up the channels where EcoCord will operate and where GIFs will be posted.
+- Activity Visualization: Watch the ecosystem change in real-time as your server becomes more or less active.
+- GIF Generation: Periodically, EcoCord will generate and post GIFs of the ecosystem in threads in the designated channel.
 
-#### Installing the dependencies
+## Contributing
 
-Once the environment is created and activated, use this command to install the development dependencies.
+We welcome contributions to EcoCord! If you have ideas for new features, improvements, or bug fixes, please feel free to:
 
-```shell
-pip install -r requirements-dev.txt
-```
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-#### Exiting the environment
+## Acknowledgments
 
-Interestingly enough, it is the same for every platform.
+- Thanks to the Python Discord community for organizing the Python Code Jam 2024
+- Shoutout to all the contributors who helped bring EcoCord to life
+- Special thanks to the creators of the wonderful libraries used in this project, including Discord.py, Pygame, and Pillow
 
-```shell
-deactivate
-```
+### Our team
 
-Once the environment is activated, all the commands listed previously should work.
+All team members contributed to the initial project planning and ideation. Special thanks to:
 
-> [!IMPORTANT]
-> We highly recommend that you run `pre-commit install` as soon as possible.
+[Stovoy](https://github.com/Stovoy)
+* Project lead and primary developer
+* Conceived the ecosystem concept and implemented the core functionality
+* Contributed the majority of the codebase
 
-## How do I adapt this template to my project?
+[Jaavv](https://github.com/Jaavv)
+* Contributed to early development stages
+* Implemented initial versions of the Discord bot and SQLite integration
 
-If you wish to use Pipenv or Poetry, you will have to move the dependencies in [`requirements-dev.txt`](requirements-dev.txt) to the development dependencies of your tool.
+[Walkercito](https://github.com/Walkercito)
+* Provided valuable testing support
+* Sourced the cloud assets used in the background from [Free Sky with Clouds Background Pixel Art Set](https://free-game-assets.itch.io/free-sky-with-clouds-background-pixel-art-set)
 
-We've included a porting of [`requirements-dev.txt`](requirements-dev.txt) to both [Poetry](samples/pyproject.toml) and [Pipenv](samples/Pipfile) in the [`samples` folder](samples).
-If you use the Poetry setup, make sure to change the project name, description, and authors at the top of the file.
-Also note that the Poetry [`pyproject.toml`](samples/pyproject.toml) file does not include the Ruff configuration, so if you simply replace the file then the Ruff configuration will be lost.
+[ShadowDogger](https://github.com/ShadowDogger) and [tinoy-t](https://github.com/tinoy-t)
+* Participated in brainstorming sessions
+* Offered insights and suggestions during the planning phase
 
-When installing new dependencies, don't forget to [pin](https://pip.pypa.io/en/stable/topics/repeatable-installs/#pinning-the-package-versions) them by adding a version tag at the end.
-For example, if I wish to install [Click](https://click.palletsprojects.com/en/8.1.x/), a quick look at [PyPI](https://pypi.org/project/click/) tells me that `8.1.7` is the latest version.
-I will then add `click~=8.1`, without the last number, to my requirements file or dependency manager.
-
-> [!IMPORTANT]
-> A code jam project is left unmaintained after the end of the event. If the dependencies aren't pinned, the project will break after any major change in an API.
-
-## Final words
-
-> [!IMPORTANT]
-> Don't forget to replace this README with an actual description of your project! Images are also welcome!
-
-We hope this template will be helpful. Good luck in the jam!
+While some initially planned features like backfilling, timelapses, and snapshotting were ultimately not implemented, the team's collaborative efforts in the early stages helped shape the project's direction and scope.
