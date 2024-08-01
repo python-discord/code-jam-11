@@ -259,3 +259,34 @@ All team members contributed to the initial project planning and ideation. Speci
 * Offered insights and suggestions during the planning phase
 
 While some initially planned features like backfilling, timelapses, and snapshotting were ultimately not implemented, the team's collaborative efforts in the early stages helped shape the project's direction and scope.
+
+## Future Roadmap
+
+While EcoCord already offers a unique and engaging experience, we have exciting plans for future enhancements:
+
+1. **Historical Data and Timelapses**
+   - Implement backfilling of past activity data
+   - Add a user interaction to request timelapses of past server activity
+
+2. **Enhanced Ecosystem Visuals**
+   - Introduce terrain deformation for a more dynamic environment
+   - Implement advanced procedural generation techniques
+   - Add more diverse critter types to represent different user behaviors
+   - Create multiple biomes and environments to reflect server themes or moods
+
+3. **Increased Customization**
+   - Allow users to customize their critter appearances and behaviors
+   - Implement server-wide visual themes and customization options
+
+4. **Activity-Based Evolution**
+   - Develop a more sophisticated system for ecosystem growth based on overall server activity levels
+   - Introduce ecosystem "events" triggered by specific server milestones or activities
+
+5. **Expanded Event Reactions**
+   - Increase the range of Discord events that influence the ecosystem
+   - Add special items or phenomena that appear in response to unique server events
+
+6. **Performance Optimizations**
+   - Continually improve rendering and processing efficiency to support larger, more active servers
+
+We're excited to bring these features to life and further enhance the EcoCord experience.
