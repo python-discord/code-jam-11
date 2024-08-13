@@ -1,0 +1,118 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sincere_singularities"
+version = "1.0.0" # no need to change the version
+description = "Sincere Singularities Python Discord Summer CodeJam 2024 project."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "clucker-m8" },
+    { name = "FoxFil" },
+    { name = "koviubi56" },
+    { name = "Vinyzu" },
+    { name = "WassCodeur" },
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Games/Entertainment",
+    "Typing :: Typed",
+]
+dynamic = ["dependencies", "optional-dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = "requirements.txt" }
+optional-dependencies.dev = { file = ["requirements-dev.txt"] }
+
+[tool.setuptools.package-data]
+sincere_singularities = ["py.typed"]
+
+[project.urls]
+Homepage = "https://github.com/SincereSingularities/SincereSingularities"
+
+[project.scripts]
+sincere_singularities = "sincere_singularities.__main__:main"
+
+[tool.ruff]
+# Increase the line length. This breaks PEP8 but it is way easier to work with.
+# The original reason for this limit was a standard vim terminal is only 79 characters,
+# but this doesn't really apply anymore.
+line-length = 119
+# Target Python 3.12. If you decide to use a different version of Python
+# you will need to update this value.
+target-version = "py312"
+# Automatically fix auto-fixable issues.
+fix = true
+# The directory containing the source code. If you choose a different project layout
+# you will need to update this value.
+src = ["src"]
+
+[tool.ruff.lint]
+# Enable all linting rules.
+select = ["ALL"]
+# Ignore some of the most obnoxious linting errors.
+ignore = [
+    # Missing docstrings.
+    "D100",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    # Docstring whitespace.
+    "D203",
+    "D212",
+    # Docstring punctuation.
+    "D415",
+    # Docstring quotes.
+    "D301",
+    # Print statements.
+    "T20",
+    # TODOs.
+    "TD002",
+    "TD003",
+    "FIX",
+    # Annotations.
+    "ANN101",
+    "ANN102",
+    # Future annotations.
+    "FA",
+    # Error messages.
+    "EM",
+    # Type Keyword (3.12+)
+    "UP040",
+    # Exceptions
+    "TRY003",
+    # Recommended by Ruff
+    "ISC001",
+    "COM812",
+    # Pseudo-Random Generators
+    "S311",
+    # Asserts
+    "S101",
+    # Function Arguments
+    "PLR0913",
+    # Magic Values
+    "PLR2004",
+    # Positional Boolean
+    "FBT001"
+]
+
+[tool.ruff.lint.pydocstyle]
+# Use Google-style docstrings.
+convention = "google"
+ignore-decorators = ["typing.overload"]
+
+[tool.mypy]
+strict = true
+disallow_untyped_decorators = false
+disallow_subclassing_any = false
