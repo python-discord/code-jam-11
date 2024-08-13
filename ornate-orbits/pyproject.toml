@@ -1,0 +1,69 @@
+[tool.poetry]
+name = "code-jam-2024"
+version = "0.1.0"
+description = "Ornate Orbits @ Code Jam 2024"
+authors = []
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "3.12.*"
+discord-py = "^2.4.0"
+
+[tool.poetry.dev-dependencies]
+ruff = "~0.5.0"
+pre-commit = "~3.7.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+# Increase the line length. This breaks PEP8 but it is way easier to work with.
+# The original reason for this limit was a standard vim terminal is only 79 characters,
+# but this doesn't really apply anymore.
+line-length = 79
+# Target Python 3.12. If you decide to use a different version of Python
+# you will need to update this value.
+target-version = "py312"
+# Automatically fix auto-fixable issues.
+fix = true
+# The directory containing the source code. If you choose a different project layout
+# you will need to update this value.
+src = ["src"]
+
+[tool.ruff.lint]
+# Enable all linting rules.
+select = ["ALL"]
+# Ignore some of the most obnoxious linting errors.
+ignore = [
+    # Missing docstrings.
+    "D100",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    # Docstring whitespace.
+    "D203",
+    "D213",
+    # Docstring punctuation.
+    "D415",
+    # Docstring quotes.
+    "D301",
+    # Imperative mood.
+    "D401",
+    # Builtins.
+    "A",
+    # Print statements.
+    "T20",
+    # TODOs.
+    "TD002",
+    "TD003",
+    "FIX",
+    # Annotations.
+    "ANN101",
+    "ANN102",
+    # Assert.
+    "S101",
+    "COM812",
+    "TRY401",
+]
