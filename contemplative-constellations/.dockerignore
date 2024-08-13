@@ -1,0 +1,9 @@
+.github/
+.git/
+.tests/
+.vscode/
+.editorconfig
+.gitattributes
+.gitignore
+.pre-commit-config.yaml
+README.md
