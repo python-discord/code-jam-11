@@ -1,0 +1,591 @@
+{
+  "1": [
+    {
+      "type": "multiple_choice",
+      "question": "What will be the output of the following code?\n\n```python\nnums = [1, 2, 3, 4, 5]\ndoubled_nums = [num * 2 for num in nums]\nprint(doubled_nums)\n```\n",
+      "hints": [
+        "The code uses a list comprehension to double each number in the list `nums`."
+      ],
+      "options": {
+        "a": "[1, 4, 9, 16, 25]",
+        "b": "[2, 4, 6, 8, 10]",
+        "c": "[2, 3, 4, 5, 6]"
+      },
+      "answer": "b"
+    },
+    {
+      "type": "write_code",
+      "question": "Write a list comprehension that squares all numbers in the list `numbers = [1, 2, 3, 4, 5]`.",
+      "hints": [
+        "You can use the expression `x ** 2` to square a number `x`.",
+        "The list comprehension should iterate over each number in the list `numbers`.",
+        "The list comprehension should have the form `[expression for item in iterable]`.",
+        "The `expression` should square the `item`."
+      ],
+      "pre_code": "numbers=[1, 2, 3, 4, 5]",
+	  "pre_submit_code": "squares=",
+      "test_cases": [
+        {
+          "input": "squares",
+          "output": "[1, 4, 9, 16, 25]"
+        }
+      ]
+    },
+    {
+      "type": "multiple_choice",
+      "question": "What will be the output of the following list comprehension?\n\n```python\nnumbers = [1, 2, 3, 4, 5]\nsquares = [x ** 2 for x in numbers if x % 2 == 0]\nprint(squares)\n```\n",
+      "hints": [
+        "The list comprehension squares each number in the list `numbers` if the number is even.",
+        "The condition `if x % 2 == 0` checks if the number `x` is even, by checking if it's divisible by 2."
+      ],
+      "options": {
+        "a": "[1, 4, 9, 16, 25]",
+        "b": "[1, 9, 25]",
+        "c": "[4, 16]"
+	  },
+      "answer": "c"
+    }
+  ],
+  "2": [
+    {
+      "type": "write_code",
+      "question": "Write a generator function `even_numbers` that generates even numbers starting from 2 up to a given limit `n` (including `n`, if it's even).",
+      "hints": [
+        "You can use a `while` loop to generate even numbers starting from 2.",
+        "The generator function should `yield` each even number.",
+        "The generator function should stop when the next even number is greater than `n`."
+      ],
+      "test_cases": [
+        {
+          "input": "list(even_numbers(5))",
+          "output": "[2, 4]"
+        },
+        {
+          "input": "list(even_numbers(10))",
+          "output": "[2, 4, 6, 8, 10]"
+        }
+      ]
+    },
+    {
+      "type": "multiple_choice",
+      "question": "What will be the output of the following code snippet?\n\n```python\ndef fibonacci_generator():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b\n\nfib_gen = fibonacci_generator()\nfib_sequence = [next(fib_gen) for _ in range(5)]\nprint(fib_sequence)\n```\n",
+      "hints": [
+        "The code snippet defines a generator function `fibonacci_generator` that generates Fibonacci numbers.",
+        "The list comprehension `[next(fib_gen) for _ in range(5)]` generates the first 5 Fibonacci numbers using the generator."
+      ],
+      "options": {
+        "a": "[0, 1, 1, 2, 3]",
+        "b": "[1, 1, 2, 3, 5]",
+        "c": "[0, 1, 2, 3, 4]"
+      },
+      "answer": "a"
+    }
+  ],
+  "3": [
+    {
+      "type": "multiple_choice",
+      "question": "What is the purpose of an iterator in Python?",
+      "hints":[
+        "An iterator is an object that can be iterated over using a `for` loop or other looping constructs."
+      ],
+      "options": {
+        "a": "To generate random numbers.",
+        "b": "To iterate over items in a sequence or collection.",
+        "c": "To create new objects from existing ones."
+      },
+      "answer": "b"
+    },
+    {
+      "type": "multiple_choice",
+      "question": "Consider the following iterator implementation:\n\n```python\nclass Countdown:\n    def __init__(self, start):\n        self.start = start\n\n    def __iter__(self):\n        return self\n\n    def __next__(self):\n        if self.start <= 0:\n            raise StopIteration\n        else:\n            self.start -= 1\n            return self.start + 1\n\ncountdown = Countdown(3)\nprint(list(countdown))\n```\n\nWhat will be the output of the code snippet?",
+      "hints": [
+        "The `Countdown` class defines an iterator that counts down from a given start number to 1.",
+        "The `__iter__` method returns the iterator object itself, and the `__next__` method generates the next value in the sequence."
+      ],
+      "options": {
+        "a": "[3, 2, 1]",
+        "b": "[1, 2, 3]",
+        "c": "[0, 1, 2]"
+      },
+      "answer": "a"
+    },
+    {
+      "type": "write_code",
+      "question": "Write an iterator class `Countdown` that iterates from a given start number down to 1.",
+      "hints": [
+        "The iterator should start from the given `start` number and count down to 1.",
+        "Remember to decrement the countdown value after each iteration.",
+        "The `__iter__` method should return the iterator object itself.",
+        "The `__next__` method should return the next value in the countdown sequence."
+      ],
+      "test_cases":[
+        {
+          "input": "list(Countdown(3))",
+          "output": "[3, 2, 1]"
+        },
+        {
+          "input": "list(Countdown(0))",
+          "output": "[]"
+        },
+        {
+          "input": "next(Countdown(5))",
+          "output": "5"
+        }
+      ]
+    }
+  ],
+  "4": [
+    {
+      "type": "multiple_choice",
+      "question": "Does Python support function overloading by default (like in languages such as C++)?",
+      "hints":[
+        "Function overloading refers to the ability to define multiple functions with the same name but different parameters."
+      ],
+      "options": {
+        "a": "Yes",
+        "b": "No",
+        "c": "It depends on the version of Python used"
+      },
+      "answer": "b"
+    },
+    {
+      "type": "write_code",
+      "question": "Implement a function `multiply` that can take either two or three arguments. If two arguments are provided, it should return their product. If three arguments are provided, it should return the product of all three numbers.",
+      "hints": [
+        "You can use default argument values to handle the case where the third argument is not provided.",
+        "The function should return the product of the first two arguments plus the third argument, if it exists."
+      ],
+      "test_cases": [
+        {
+          "input": "multiply(2, 3)",
+          "output": "6"
+        },
+        {
+          "input": "multiply(2, 3, 4)",
+          "output": "24"
+        },
+        {
+          "input": "multiply(-2, 5)",
+          "output": "-10"
+        },
+        {
+          "input": "multiply(-2, 5, 3)",
+          "output": "-30"
+        }
+      ]
+    },
+    {
+      "type": "multiple_choice",
+      "question": "Consider the following Python code:\n\n```python\ndef add(a, b):\n    return a + b\n\ndef add(a, b, c):\n    return a + b + c\n\nprint(add(1, 2))\n```\n\nWhat will be the output of this code?",
+      "hints": [
+        "The code defines two functions with the same name `add` but different numbers of arguments.",
+        "Python does not support function overloading by default, so the second function definition will overwrite the first."
+      ],
+      "options": {
+        "a": "3",
+        "b": "TypeError: add() missing 1 required positional argument: 'c'",
+        "c": "TypeError: add() takes 3 positional arguments but 2 were given"
+      },
+      "answer": "b"
+    }
+  ],
+  "5": [
+	{
+	  "type": "multiple_choice",
+	  "question": "What will be the output of the following code?\n\n```python\ndef overloaded_function(x, y=None):\n    if y is None:\n        return (i * 2 for i in x)\n    else:\n        return [i * 2 for i in range(x, y)]\n\nresult1 = overloaded_function([1, 2, 3])\nresult2 = overloaded_function(3, 6)\n\nprint(list(result1))\nprint(result2)\n```\n",
+	  "hints": [
+		"The function uses a generator when only one argument is passed and a list comprehension when two arguments are passed.",
+		"The generator yields elements one by one, while the list comprehension returns a complete list."
+	  ],
+	  "options": {
+		"a": "[2, 4, 6]  [6, 8, 10, 12]",
+		"b": "[2, 4, 6]  [6, 8, 10]",
+		"c": "[2, 4, 6, 8, 10]  [6, 8, 10]"
+	  },
+	  "answer": "b"
+	},
+	{
+	  "type": "write_code",
+	  "question": "Write a regular expression that matches an email address. Compile the regex and store it in the variable `pattern`.\n\n*Assume that the email has the format `name@domain.com` and consists of only ascii letters.*",
+	  "hints": [
+		"Remember to `import re` to use the regex module.",
+		"Use `re.compile` to compile your regex."
+	  ],
+	  "test_cases": [
+		{
+		  "input": "bool(pattern.match('test@example.com'))",
+		  "output": "True"
+		},
+		{
+		  "input": "bool(pattern.match('not-an-email'))",
+		  "output": "False"
+		}
+	  ]
+	},
+	{
+	  "type": "multiple_choice",
+	  "question": "What will be the output of the following code?\n\n```python\nimport re\npattern = re.compile(r'\\b\\w+\\b')\nresult = pattern.findall('This is a test')\nprint(result)\n```\n",
+	  "hints": [
+		"The pattern '\\b\\w+\\b' matches whole words."
+	  ],
+	  "options": {
+		"a": "['This', 'is', 'a', 'test', '']",
+		"b": "['This', 'is', 'a', 'test']",
+		"c": "['T', 'h', 'i', 's', 'i', 's', 'a', 't', 'e', 's', 't']"
+	  },
+	  "answer": "b"
+	}
+  ],
+  "6": [
+	{
+	  "type": "multiple_choice",
+	  "question": "What will be the output of the following code?\n\n```python\nwith open('example.txt', 'w') as file:\n    file.write('Hello, World!')\n\nwith open('example.txt', 'r') as file:\n    content = file.read()\nprint(content)\n```\n",
+	  "hints": [
+		  "The code writes 'Hello, World!' to a file named 'example.txt' and then reads the content of the file."
+	  ],
+	  "options": {
+      "a": "FileNotFoundError",
+      "b": "Hello, World!",
+      "c": ""
+	  },
+	  "answer": "b"
+	},
+	{
+	  "type": "multiple_choice",
+	  "question": "Which mode should you use to open a file for both reading and writing?\n",
+	  "hints": [
+		  "There is a mode that allows for both reading and writing in Python."
+	  ],
+	  "options": {
+		"a": "w+",
+		"b": "rw",
+		"c": "r+"
+	  },
+	  "answer": "c"
+	},
+	{
+		"type": "multiple_choice",
+		"question": "What will be the output of the following code?\n\n```python\nimport os\n\nclass FileManager:\n    def __init__(self, filename):\n        self.filename = filename\n    def process_file(self):\n        with open(self.filename, 'w') as f:\n            f.write('Line1\\nLine2\\nLine3')\n        with open(self.filename, 'r') as f:\n            lines = f.readlines()\n        return [line.strip() for line in lines if line.strip().startswith('Line')]\n\nmanager = FileManager('test_file.txt')\nprint(manager.process_file())\nos.remove('test_file.txt')\n```\n",
+		"hints": [
+			"The `process_file` method writes to the file, then reads from it and processes the lines.",
+			"The method uses `strip` and `startswith` to filter lines."
+		],
+		"options": {
+			"a": "['Line1', 'Line2']",
+			"b": "['Line1', 'Line2', 'Line3']",
+			"c": "['Line2', 'Line3']"
+		},
+		"answer": "b"
+	}
+  ],
+  "7": [
+	{
+	  "type": "multiple_choice",
+	  "question": "What does the following regular expression match?\n\n```python\nimport re\npattern = re.compile(r'\\d+')\nresult = pattern.match('abc123')\n```\n",
+	  "hints": [
+		  "The pattern '\\d+' matches one or more digits."
+	  ],
+	  "options": {
+      "a": "123",
+      "b": "abc",
+      "c": "None"
+	  },
+	  "answer": "c"
+	},
+	{
+	  "type": "write_code",
+	  "question": "Write a regular expression that matches an email address and test it using the re module.",
+	  "hints": [
+		  "Use the re module to compile and match the regular expression."
+	  ],
+	  "test_cases": [
+		{
+		  "input": "bool(pattern.match('test@example.com'))",
+		  "output": "True"
+		},
+		{
+		  "input": "bool(pattern.match('not-an-email'))",
+		  "output": "False"
+		}
+	  ]
+	},
+	{
+	  "type": "multiple_choice",
+	  "question": "What will be the output of the following code?\n\n```python\nimport re\npattern = re.compile(r'\\b\\w+\\b')\nresult = pattern.findall('This is a test')\nprint(result)\n```\n",
+	  "hints": [
+		  "The pattern '\\b\\w+\\b' matches whole words."
+	  ],
+	  "options": {
+      "a": "['This', 'is', 'a', 'test', '']",
+      "b": "['This', 'is', 'a', 'test']",
+      "c": "['T', 'h', 'i', 's', 'i', 's', 'a', 't', 'e', 's', 't']"
+	  },
+	  "answer": "b"
+	}
+  ],
+  "8": [
+	{
+	  "type": "multiple_choice",
+	  "question": "What will be the output of the following code?\n\n```python\nclass Dog:\n    def __init__(self, name):\n        self.name = name\n    def bark(self):\n        return 'Woof!'\n\nmy_dog = Dog('Fido')\nprint(my_dog.bark())\n```\n",
+	  "hints": [
+		"The bark method returns the string 'Woof!'."
+	  ],
+	  "options": {
+		"a": "Woof!",
+		"b": "Fido",
+		"c": "None"
+	  },
+	  "answer": "a"
+	},
+	{
+	  "type": "write_code",
+	  "question": "Write a Python class named `Car` with an `__init__` method that initializes the make and model of the car, and a method named `description` that returns a string in the format `'Make: [make], Model: [model]'`.",
+	  "hints": [
+		"Define the `__init__` method to accept make and model as parameters: `__init__('Toyota', 'Corolla')` should be valid.",
+		"The description method should return a formatted string using the instance variables.",
+		"Do not include the `[` and `]` characters in your output",
+		"Check that the spacing in your output is exactly correct!"
+	  ],
+	  "test_cases": [
+		{
+		  "input": "Car('Toyota', 'Corolla').description()",
+		  "output": "'Make: Toyota, Model: Corolla'"
+		},
+		{
+		  "input": "Car('Honda', 'Civic').description()",
+		  "output": "'Make: Honda, Model: Civic'"
+		}
+	  ]
+	},
+	{
+	  "type": "multiple_choice",
+	  "question": "What will be the output of the following code?\n\n```python\nclass Animal:\n    def sound(self):\n        pass\n\nclass Cat(Animal):\n    def sound(self):\n        return 'Meow'\n\nmy_cat = Cat()\nprint(my_cat.sound())\n```\n",
+	  "hints": [
+		  "The Cat class overrides the sound method to return 'Meow'."
+	  ],
+	  "options": {
+      "a": "Woof",
+      "b": "None",
+      "c": "Meow"
+	  },
+	  "answer": "c"
+	}
+  ],
+  "9": [
+	{
+		"type": "multiple_choice",
+		"question": "Which of the following best describes polymorphism in object-oriented programming?",
+		"hints": [
+		  "Polymorphism allows methods to do different things based on the object it is acting upon."
+		],
+		"options": {
+		"a": "Polymorphism allows objects to take on many forms",
+		"b": "Polymorphism allows the hiding of data from direct access",
+		"c": "Polymorphism is the ability to create a new class from an existing class"
+		},
+		"answer": "a"
+	},
+	{
+		"type": "multiple_choice",
+		"question": "Which of the following is an example of encapsulation in Python?",
+		"hints": [
+		  "Encapsulation involves bundling the data and methods that operate on the data within one unit, like a class."
+		],
+		"options": {
+      "a": "Using inheritance to create a subclass",
+      "b": "Using a for loop to iterate over a list",
+      "c": "Using getter and setter methods to access private variables"
+		},
+		"answer": "c"
+	}
+  ],
+  "10": [
+	{
+	  "type": "multiple_choice",
+	  "question": "Consider the following Python code snippet:\n\n```python\nimport re\n\nclass LogAnalyzer:\n    def __init__(self, file_path):\n        self._file_path = file_path\n        self._lines = self._read_file()\n\n    def _read_file(self):\n        with open(self._file_path, 'r') as file:\n            return file.readlines()\n\n    def get_error_lines(self):\n        return [line for line in self._lines if re.search(r'ERROR', line)]\n\nanalyzer = LogAnalyzer('log.txt')\nprint(analyzer.get_error_lines())\n```\n\nWhat will be the output if 'log.txt' contains lines with the word 'ERROR'?",
+	  "hints": [
+		"The class encapsulates file handling and uses a regular expression to find lines with 'ERROR'.",
+		"The _read_file method reads the file contents into a list of lines.",
+		"The get_error_lines method uses a list comprehension to filter lines containing 'ERROR'."
+	  ],
+	  "options": {
+		"a": "A list of lines containing the word 'ERROR'",
+		"b": "All lines in the file",
+		"c": "None"
+	  },
+	  "answer": "a"
+	},
+	{
+	  "type": "multiple_choice",
+	  "question": "Which method demonstrates encapsulation in the following code snippet?\n\n```python\nclass TextProcessor:\n    def __init__(self, text):\n        self._text = text\n\n    def get_uppercase_words(self):\n        return [word for word in self._text.split() if word.isupper()]\n\nprocessor = TextProcessor('HELLO world PYTHON')\nprint(processor.get_uppercase_words())\n```\n",
+	  "hints": [
+		"Encapsulation involves hiding the internal state of the object.",
+		"The get_uppercase_words method operates on the encapsulated _text attribute."
+	  ],
+	  "options": {
+		"a": "__init__ method",
+		"b": "get_uppercase_words method",
+		"c": "split method"
+	  },
+	  "answer": "b"
+	},
+	{
+	  "type": "multiple_choice",
+	  "question": "The file `data.txt` contains the following text: ```\n123 ABC\n456 DEF\n789 GHI\n```\n\nWhat will the output from this code be? ```python\nclass DataFilter:\n    def __init__(self, file_path):\n        self._file_path = file_path\n\n    def filter_numeric_lines(self):\n        with open(self._file_path, 'r') as file:\n            return [line for line in file if re.match(r'\\d+', line)]\n\nfilter = DataFilter('data.txt')\nprint(filter.filter_numeric_lines())\n```",
+	  "hints": [
+      "The `filter_numeric_lines` method reads the file and uses a regular expression to filter lines starting with digits.",
+      "List comprehension is used to create the list of matching lines."
+	  ],
+	  "options": {
+      "a": "['123 ABC\\n', '456 DEF\\n', '789 GHI\\n']",
+      "b": "['123 ABC\\n', '456 DEF\\n', '789 GHI']",
+      "c": "['123 ABC', '456 DEF', '789 GHI']"
+	  },
+	  "answer": "b"
+	},
+	{
+	  "type": "multiple_choice",
+	  "question": "The file `data.txt` contains the following text: ```one1\ntwo2\nthree3\n```\nWhat will be the output of the following code? ```python\nimport re\n\nclass WordExtractor:\n    def __init__(self, file_path):\n        self._file_path = file_path\n\n    def extract_words(self):\n        with open(self._file_path, 'r') as file:\n            return [re.sub(r'\\d+', '', line.strip()) for line in file]\n\nextractor = WordExtractor('input.txt')\nprint(extractor.extract_words())\n```",
+	  "hints": [
+      "The extract_words method uses a regular expression to remove digits from each line.",
+      "List comprehension is used to create a list of cleaned lines."
+	  ],
+	  "options": {
+      "a": "['one', 'two', 'three']",
+      "b": "['one1', 'two2', 'three3']",
+      "c": "['one\\n', 'two\\n', 'three\\n']"
+	  },
+	  "answer": "a"
+	}
+  ],
+  "11": [
+	  {
+			"type": "multiple_choice",
+			"question": "What will be the output of the following code?\n\n```python\nclass Base:\n    def __init__(self, value):\n        self.value = value\n    def display(self):\n        return f'Base: {self.value}'\n\nclass Derived(Base):\n    def display(self):\n        return f'Derived: {self.value}'\n\nobj = Derived(10)\nprint(obj.display())\n```\n",
+			"hints": [
+				"The Derived class overrides the display method of the Base class."
+			],
+			"options": {
+				"a": "Base: 10",
+				"b": "Derived: 10",
+				"c": "Error"
+			},
+			"answer": "b"
+		},
+		{
+			"type": "multiple_choice",
+			"question": "What is the output of the following code?\n\n```python\nclass Overloaded:\n    def func(self, a, b=None):\n        if b is None:\n            return a * 2\n        return a + b\n\nobj = Overloaded()\nprint(obj.func(3))\nprint(obj.func(3, 4))\n```\n",
+			"hints": [
+				"The method func is overloaded to handle cases with one or two arguments."
+			],
+			"options": {
+				"a": "6\n12",
+				"b": "Error",
+				"c": "6\n7"
+			},
+			"answer": "c"
+		},
+		{
+			"type": "multiple_choice",
+			"question": "What is the output of the following code?\n\n```python\ndef generator():\n    for i in range(3):\n        yield i * 2\n\nclass IterableGen:\n    def __iter__(self):\n        return generator()\n\nobj = IterableGen()\nresult = list(obj)\nprint(result)\n```\n",
+			"hints": [
+				"The IterableGen class makes use of a generator function to create an iterable."
+			],
+			"options": {
+				"a": "[0, 1, 2]",
+				"b": "[0, 2, 4]",
+				"c": "Error"
+			},
+			"answer": "b"
+		},
+		{
+			"type": "write_code",
+      "question": "Write a Python class `Squares` that implements the `__iter__` and `__next__` methods to generate squares of numbers starting from 1 up to a given limit `n` (including `n`).",
+      "hints": [
+        "Save the value of `n` when initializing the iterator.",
+        "The `__iter__` method should return the iterator object itself.",
+        "The `__next__` method should return the next square value in the sequence.",
+        "The iterator should stop when the next square value is greater than `n`."
+      ],
+      "test_cases": [
+        {
+          "input": "list(Squares(5))",
+          "output": "[1, 4, 9, 16, 25]"
+        },
+        {
+          "input": "list(Squares(10))",
+          "output": "[1, 4, 9, 16, 25, 36, 49, 64, 81, 100]"
+        },
+        {
+          "input": "next(Squares(3))",
+          "output": "1"
+        }
+      ]
+		}
+  ],
+  "12": [
+	{
+		"type": "write_golf_code",
+		"question": "Golf the following code to return the sum of squares of a list of integers.\n```python\ndef sum_of_squares(nums):\n    result = 0\n    for num in nums:\n        result += num ** 2\n    return result\n```",
+		"hints": [
+			"Remove any spaces that aren't strictly necessary.",
+			"Use built-in functions to minimize code length.",
+			"Use a single line list comprehension.",
+			"Remember -- it only has to work. It doesn't have to be readable!"
+		],
+		"test_cases": [
+			{
+				"input": "sum_of_squares([1, 2, 3, 4])",
+				"output": "30"
+			},
+			{
+				"input": "sum_of_squares([0, 5, 10])",
+				"output": "125"
+			}
+		],
+		"max_characters": 44
+	}
+	],
+	"13": [
+	  {
+		"type": "write_golf_code",
+		"question": "Golf the following code to merge two sorted lists of ints into a single sorted list.\n\n```python\ndef merge_sorted_lists(list1, list2):\n    result = []\n    i = j = 0\n    while i < len(list1) and j < len(list2):\n        if list1[i] < list2[j]:\n            result.append(list1[i])\n            i += 1\n        else:\n            result.append(list2[j])\n            j += 1\n    result.extend(list1[i:])\n    result.extend(list2[j:])\n    return result\n```",
+		"hints": [
+		  "Consider using the sorted function.",
+		  "Combine the two lists first."
+		],
+		"test_cases": [
+		{
+			"input": "merge_sorted_lists([1, 3, 5], [2, 4, 6])",
+			"output": "[1, 2, 3, 4, 5, 6]"
+		},
+		{
+			"input": "merge_sorted_lists([0, 10, 20], [5, 15, 25])",
+			"output": "[0, 5, 10, 15, 20, 25]"
+		}
+		],
+		"max_characters": 41
+	  }
+	],
+	"14": [
+	  {
+		"type": "write_golf_code",
+		"question": "Golf the following code to find all prime numbers up to a given number n.\n\n```python\ndef find_primes(n):\n    primes = []\n    for num in range(2, n + 1):\n        is_prime = True\n        for i in range(2, int(num ** 0.5) + 1):\n            if num % i == 0:\n                is_prime = False\n                break\n        if is_prime:\n            primes.append(num)\n    return primes\n```",
+		"hints": [
+		  "Use list comprehensions to condense the code.",
+		  "Consider using the all() function."
+		],
+		"test_cases": [
+		{
+		  "input": "find_primes(10)",
+		  "output": "[2, 3, 5, 7]"
+		},
+		{
+		  "input": "find_primes(20)",
+		  "output": "[2, 3, 5, 7, 11, 13, 17, 19]"
+		}
+		],
+		"max_characters": 89
+	  }
+  ]
+}
