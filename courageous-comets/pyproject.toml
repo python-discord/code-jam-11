@@ -1,0 +1,113 @@
+[tool.poetry]
+name = "courageous-comets"
+version = "1.0.0"
+authors = ["Courageous Comets"]
+description = ""
+readme = "docs/README.md"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "~3.12"
+asyncache = "0.3.1"
+cachetools = "5.4.0"
+coloredlogs = "15.0.1"
+contractions = "0.1.73"
+discord-py = "2.4.0"
+jishaku = "2.5.2"
+matplotlib = "3.9.1"
+nltk = "3.8.1"
+pydantic = "2.8.2"
+pynacl = "1.5.0"
+python-dotenv = "1.0.1"
+pyyaml = "6.0.1"
+redis = { extras = ["hiredis"], version = "5.0.7" }
+redisvl = { extras = ["hiredis"], version = "0.2.3" }
+torch = { version = "~2.3.1+cpu", source = "pytorch-cpu" }
+transformers = "4.43.3"
+unidecode = "1.3.8"
+
+[tool.poetry.dev-dependencies]
+commitizen = "3.27.0"
+mike = "2.1.2"
+mkdocs = "1.6.0"
+mkdocs-material = "9.5.29"
+pre-commit = "3.7.1"
+pymdown-extensions = "10.8.1"
+pyright = "^1.1.373"
+pytest = "8.2.2"
+pytest-asyncio = "0.23.7"
+pytest-mock = "3.14.0"
+pytest-sugar = "1.0.0"
+ruff = "0.5.2"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+
+[tool.poetry.group.dev.dependencies]
+faker = "^26.0.0"
+
+[tool.pyright]
+typeCheckingMode = "basic"
+pythonVersion = "3.12"
+reportUnnecessaryTypeIgnoreComment = "error"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Ignore warnings from dependencies
+filterwarnings = [
+    "ignore:'audioop' is deprecated and slated for removal in Python 3.13",
+    "ignore:invalid escape sequence *",
+    "ignore:`resume_download` is deprecated and will be removed *",
+    "ignore:datetime.datetime.utcnow",
+]
+markers = ["num_messages(num=10): create num messages."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = [
+    # Self and cls do not require annotations.
+    "ANN101",
+    "ANN102",
+    # Module level docstrings don't always make sense
+    "D104",
+    # Pyright error codes are obnoxiously long. Ignore lint telling you to use them.
+    "PGH003",
+    # Documenting every file is a bit redundant for us.
+    "D100",
+    # No point in documenting magic methods.
+    "D105",
+    # Makes more sense to use `Parameters` in the main class instead of in the `__init__` .
+    "D107",
+    # We do not need cryptographically secure random functions.
+    "S311",
+    # Just let us use TODOs minimally!!
+    "TD003",
+    "FIX002",
+]
+select = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/test__*.py" = ["S101", "PLR2004"]
+"examples/**/*.py" = ["INP001"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.commitizen]
+changelog_file = "docs/CHANGELOG.md"
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver2"
+version_provider = "poetry"
+update_changelog_on_bump = true
+major_version_zero = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
