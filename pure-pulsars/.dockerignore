@@ -1,0 +1,16 @@
+__pycache__
+.github
+.ruff_cache
+tests
+docs
+.vscode
+.venv
+
+Pipfile
+poetry.lock
+code-jam-11.code-workspace
+config.env
+.gitignore
+.pre-commit-config.yaml
+pyproject.toml
+requirements-dev.txt
