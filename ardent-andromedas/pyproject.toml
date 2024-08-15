@@ -1,0 +1,101 @@
+[tool.poetry]
+name = "python-code-jam-2024"
+version = "0.1.0"
+description = ""
+authors = ["Steve Mostovoy <stevemostovoysm@gmail.com>"]
+readme = "README.md"
+packages = [
+    { include = "src" }
+]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "3.12.*"
+pygame = "2.6.0"
+pillow = "10.4.0"
+setuptools = "^71.0.4"
+discord-py = "^2.4.0"
+python-dotenv = "^1.0.1"
+numpy = "^2.0.0"
+pydantic = "^2.8.2"
+aiosqlite = "^0.20.0"
+wordcloud = "^1.9.3"
+emoji = "^2.12.1"
+
+[tool.poetry.dev-dependencies]
+ruff = "0.5.4"
+pre-commit = "3.7.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 119
+target-version = "py312"
+fix = true
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+# Ignore some of the most obnoxious linting errors.
+ignore = [
+    # Missing docstrings.
+    "D100",
+    # Builtins.
+    "A",
+    # Print statements.
+    "T20",
+    # TODOs.
+    "TD002",
+    "TD003",
+    "FIX",
+    # Random
+    "S311",
+    # Docstrings
+    "D102",
+    # Magic values
+    "PLR2004",
+    "FBT002",
+    "FBT003",
+    # Boolean arguments
+    "FBT001",
+    # Unused argument
+    "ARG002",
+    # Complexity
+    "C901",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    # Ambiguous formatting rules
+    "D203",
+    "D211",
+    "D213",
+    "W191",
+    "E111",
+    "E114",
+    "E117",
+    "D206",
+    "D300",
+    "Q000",
+    "Q001",
+    "Q002",
+    "Q003",
+    "COM812",
+    "COM819",
+    "ISC001",
+    "ISC002",
+    # Subprocess
+    "S603",
+]
+
+[tool.poetry.scripts]
+lint = "src.scripts:lint"
+run = "src.scripts:run"
+run-interactive = "src.scripts:run_interactive"
+run-test = "src.scripts:run_discord_test"
+run-gifs = "src.scripts:run_gifs"
+dev = "src.scripts:dev"
+dev-interactive = "src.scripts:dev_interactive"
+dev-test = "src.scripts:dev_discord_test"
+dev-gifs = "src.scripts:dev_gifs"
