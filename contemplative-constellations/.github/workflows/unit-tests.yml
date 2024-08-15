@@ -1,0 +1,58 @@
+---
+name: Unit-Tests
+
+on: workflow_call
+
+jobs:
+  unit-tests:
+    runs-on: ${{ matrix.platform }}
+
+    strategy:
+      fail-fast: false # Allows for matrix sub-jobs to fail without cancelling the rest
+      matrix:
+        platform: [ubuntu-latest, windows-latest]
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup poetry
+        id: poetry_setup
+        uses: ItsDrike/setup-poetry@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          install-args: "--without lint"
+
+      - name: Run pytest
+        shell: bash
+        run: |
+          # Ignore exit code 5 (no tests found)
+          poetry run pytest -v || ([ $? = 5 ] && exit 0 || exit $?)
+
+          python .github/scripts/normalize_coverage.py
+          mv .coverage .coverage.${{ matrix.platform }}.${{ matrix.python-version }}
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage.${{ matrix.platform }}.${{ matrix.python-version }}
+          path: .coverage.${{ matrix.platform }}.${{ matrix.python-version }}
+          retention-days: 1
+          if-no-files-found: error
+
+  tests-done:
+    needs: [unit-tests]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set status based on required jobs
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              exit 1
+            fi
+          done

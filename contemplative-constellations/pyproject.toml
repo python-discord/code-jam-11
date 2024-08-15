@@ -1,0 +1,252 @@
+[tool.poetry]
+name = "code-jam-2024"
+version = "0.1.0"
+description = "Python Discord's Code Jam 2024, Contemplative Constellations Team Project"
+authors = [
+  "ItsDrike <itsdrike@protonmail.com>",
+  "Benji <binyamin1bbb@gmail.com>",
+  "Paillat-dev <me@paillat.dev>",
+  "v33010 <vivekgohil2606@gmail.com>",
+  "Ash8121 <ashtikkm@gmail.com>"
+]
+readme = "README.md"
+license = "MIT"
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+py-cord = "^2.6.0"
+python-decouple = "^3.8"
+coloredlogs = "^15.0.1"
+pydantic = "^2.8.2"
+sqlalchemy = { version = "^2.0.31", extras = ["asyncio"] }
+aiosqlite = "^0.20.0"
+alembic = "^1.13.2"
+aiocache = {extras = ["memcached", "redis"], version = "^0.12.2"}
+
+[tool.poetry.group.lint.dependencies]
+ruff = "^0.3.2"
+pre-commit = "^3.6.2"
+basedpyright = "^1.13.3"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.1.1"
+pytest-asyncio = "^0.23.6"
+pytest-cov = "^5.0.0"
+
+
+[tool.poetry.group.dev.dependencies]
+datamodel-code-generator = {extras = ["http"], version = "^0.25.8"}
+
+
+[tool.datamodel-codegen]
+field-constraints = true
+snake-case-field = true
+target-python-version = "3.12"
+use-default-kwarg = true
+use-exact-imports = true
+use-field-description = true
+use-union-operator = true
+reuse-model = true
+output-model-type = "pydantic_v2.BaseModel"
+custom-file-header = "# ruff: noqa: D101 # Allow missing docstrings"
+field-include-all-keys = true
+strict-nullable = true
+
+[tool.poetry.scripts]
+generate-tvdb-models = "tools.generate_tvdb_models:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 119
+fix = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+
+ignore = [
+  "C90", # mccabe
+  "CPY", # flake8-copyright
+  "EM",  # flake8-errmsg
+  "SLF", # flake8-self
+  "ARG", # flake8-unused-arguments
+  "TD",  # flake8-todos
+  "FIX", # flake8-fixme
+  "PD",  # pandas-vet
+
+  "D100", # Missing docstring in public module
+  "D104", # Missing docstring in public package
+  "D105", # Missing docstring in magic method
+  "D106", # Missing docstring in public nested class
+  "D107", # Missing docstring in __init__
+  "D203", # Blank line required before class docstring
+  "D213", # Multi-line summary should start at the second line (incompatible with D212)
+  "D301", # Use r""" if any backslashes in a docstring
+  "D401", # First line of docstring should be in imperative mood
+  "D404", # First word of the docstring should not be "This"
+  "D405", # Section name should be properly capitalized
+  "D406", # Section name should end with a newline
+  "D407", # Missing dashed underline after section
+  "D408", # Section underline should be in the line following the section's name
+  "D409", # Section underline should match the length of its name
+  "D410", # Missing blank line after section
+  "D411", # Missing blank line before section
+  "D412", # No blank lines allowed between a section header and its content
+  "D413", # Missing blank line after last section
+  "D414", # Section has no content
+  "D416", # Section name should end with a colon
+  "D417", # Missing argument description in the docstring
+
+  "ANN101", # Missing type annotation for self in method
+  "ANN102", # Missing type annotation for cls in classmethod
+  "ANN204", # Missing return type annotation for special method
+  "ANN401", # Dynamically typed expressions (typing.Any) disallowed
+
+  "SIM102", # use a single if statement instead of nested if statements
+  "SIM108", # Use ternary operator {contents} instead of if-else-block
+
+  "G001", # Logging statement uses str.format
+  "G004", # Logging statement uses f-string
+  "G003", # Logging statement uses +
+
+  "B904", # Raise without `from` within an `except` clause
+
+  "UP038",   # Use `X | Y` in `isinstance` call instead of `(X, Y)`
+  "PLR2004", # Using unnamed numerical constants
+  "PGH003",  # Using specific rule codes in type ignores
+  "E731",    # Don't asign a lambda expression, use a def
+  "S311",    # Use `secrets` for random number generation, not `random`
+  "TRY003",  # Avoid specifying long messages outside the exception class
+
+  # Redundant rules with ruff-format:
+  "E111",   # Indentation of a non-multiple of 4 spaces
+  "E114",   # Comment with indentation  of a non-multiple of 4 spaces
+  "E117",   # Cheks for over-indented code
+  "D206",   # Checks for docstrings indented with tabs
+  "D300",   # Checks for docstring that use ''' instead of """
+  "Q000",   # Checks of inline strings that use wrong quotes (' instead of ")
+  "Q001",   # Multiline string that use wrong quotes (''' instead of """)
+  "Q002",   # Checks for docstrings that use wrong quotes (''' instead of """)
+  "Q003",   # Checks for avoidable escaped quotes ("\"" -> '"')
+  "COM812", # Missing trailing comma (in multi-line lists/tuples/...)
+  "COM819", # Prohibited trailing comma (in single-line lists/tuples/...)
+  "ISC001", # Single line implicit string concatenation ("hi" "hey" -> "hihey")
+  "ISC002", # Multi line implicit string concatenation
+]
+
+[tool.ruff.lint.isort]
+order-by-type = false
+case-sensitive = true
+combine-as-imports = true
+
+# Redundant rules with ruff-format
+force-single-line = false       # forces all imports to appear on their own line
+force-wrap-aliases = false      # Split imports with multiple members and at least one alias
+lines-after-imports = -1        # The number of blank lines to place after imports
+lines-between-types = 0         # Number of lines to place between "direct" and import from imports
+split-on-trailing-comma = false # if last member of multiline import has a comma, don't fold it to single line
+
+[tool.ruff.lint.pylint]
+max-args = 15
+max-branches = 15
+max-locals = 15
+max-nested-blocks = 5
+max-returns = 8
+max-statements = 75
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = [
+  "ANN",  # annotations
+  "D",    # docstrings
+  "S101", # Use of assert
+]
+".github/scripts/**.py" = [
+  "INP001", # Implicit namespace package
+]
+"alembic-migrations/env.py" = [
+  "INP001", # Implicit namespace package
+]
+"alembic-migrations/versions/*" = [
+  "INP001", # Implicit namespace package
+  "D103",   # Missing docstring in public function
+  "D400",   # First line should end with a period
+  "D415",   # First line should end with a period, question mark, or exclamation point
+]
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.basedpyright]
+pythonPlatform = "All"
+pythonVersion = "3.12"
+typeCheckingMode = "all"
+
+# Diagnostic behavior settings
+strictListInference = false
+strictDictionaryInference = false
+strictSetInference = false
+analyzeUnannotatedFunctions = true
+strictParameterNoneValue = true
+enableTypeIgnoreComments = true
+deprecateTypingAliases = true
+enableExperimentalFeatures = false
+disableBytesTypePromotions = true
+
+# Diagnostic rules
+reportAny = false
+reportImplicitStringConcatenation = false
+reportUnreachable = "information"
+reportMissingTypeStubs = false
+reportUninitializedInstanceVariable = false # until https://github.com/DetachHead/basedpyright/issues/491
+reportMissingParameterType = false          # ruff's flake8-annotations (ANN) already covers this + gives us more control
+
+# Too strict for py-cord codebases
+reportIncompatibleMethodOverride = false
+reportUnusedCallResult = false
+
+# Unknown type reporting rules (too strict for most code-bases)
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnknownLambdaType = false
+
+executionEnvironments = [
+  { root = "src/db_tables", reportImportCycles = false },
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--strict-markers --cov --no-cov-on-fail"
+
+[tool.coverage.report]
+precision = 2
+fail_under = 0
+show_missing = true
+skip_covered = false
+skip_empty = false
+sort = "cover"
+exclude_lines = [
+  "\\#\\s*pragma: no cover",
+  "^\\s*if (typing\\.)?TYPE_CHECKING:",
+  "^\\s*@(abc\\.)?abstractmethod",
+  "^\\s*@(typing\\.)?overload",
+  "^\\s*def __repr__\\(",
+  "^\\s*class .*\\bProtocol\\):",
+  "^\\s*raise NotImplementedError",
+  "^\\s*return NotImplemented",
+  "^\\s*\\.\\.\\.",
+]
+
+[tool.coverage.run]
+relative_files = true
+parallel = true
+branch = true
+timid = false
+source = ["src"]
