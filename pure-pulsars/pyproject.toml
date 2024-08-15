@@ -1,0 +1,93 @@
+[tool.ruff]
+# Increase the line length. This breaks PEP8 but it is way easier to work with.
+# The original reason for this limit was a standard vim terminal is only 79 characters,
+# but this doesn't really apply anymore.
+line-length = 119
+# Target Python 3.12. If you decide to use a different version of Python
+# you will need to update this value.
+target-version = "py312"
+# Automatically fix auto-fixable issues.
+fix = true
+# The directory containing the source code. If you choose a different project layout
+# you will need to update this value.
+src = ["src"]
+
+[tool.ruff.lint]
+# Enable all linting rules.
+select = ["ALL"]
+# Ignore some of the most obnoxious linting errors.
+ignore = [
+    # Missing docstrings.
+    "D100",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    # Docstring whitespace.
+    "D203",
+    "D213",
+    # Docstring punctuation.
+    "D415",
+    # Docstring quotes.
+    "D301",
+    # Builtins.
+    "A",
+    # Print statements.
+    "T20",
+    # TODOs.
+    "TD002",
+    "TD003",
+    "FIX",
+    # Annotations.
+    "ANN101",
+    "ANN102",
+    # Additional codes.
+    "COM812",  # missing-trailing-comma
+    "COM819",  # prohibited-trailing-comma
+    "D206",    # indent-with-spaces
+    "D300",    # triple-single-quotes
+    "E111",    # indentation-with-invalid-multiple
+    "E114",    # indentation-with-invalid-multiple-comment
+    "E117",    # over-indented
+    "E501",    # line-too-long
+    "INP001",  # implicit-namespace-package
+    "ISC001",  # single-line-implicit-string-concatenation
+    "ISC002",  # multi-line-implicit-string-concatenation
+    "Q000",    # bad-quotes-inline-string
+    "Q001",    # bad-quotes-multiline-string
+    "Q002",    # bad-quotes-docstring
+    "Q003",    # avoidable-escaped-quote
+    "W191",    # tab-indentation
+]
+
+[tool.poetry]
+name = "wikiwabbit"
+version = "0.1.0"
+description = "A cool discord bot that you can play games with. Centered around the Wikipedia site as its back bone"
+authors = ["Danny <dannytheheretic@proton.me>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.12.*"
+humanize = "~4.10.0"
+aiohttp = "~3.9.5"
+pywikibot = "~9.2.1"
+"discord.py" = "~2.4.0"
+firebase-admin = "~6.5.0"
+python-dotenv = "~1.0.1"
+google-generativeai = "^0.7.2"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "~0.5.0"
+pre-commit = "~3.7.1"
+deptry = "^0.17.0"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.1"
+pytest-asyncio = "^0.23.8"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
