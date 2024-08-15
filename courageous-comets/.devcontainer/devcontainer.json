@@ -1,0 +1,85 @@
+{
+  "containerEnv": {
+    "BOT_CONFIG_PATH": "${containerWorkspaceFolder}/application.yaml",
+    "ENVIRONMENT": "development",
+    "HF_HOME": "${containerWorkspaceFolder}/hf_data",
+    "NLTK_DATA": "${containerWorkspaceFolder}/nltk_data",
+    "POETRY_VIRTUALENVS_CREATE": "false",
+    "REDIS_HOST": "localhost",
+    "REDIS_PASSWORD": "redis",
+    "REDIS_PORT": "6379",
+    "SOPS_AGE_KEY_FILE": "${containerWorkspaceFolder}/secrets/keys.txt"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "DavidAnson.vscode-markdownlint",
+        "KnisterPeter.vscode-commitizen",
+        "tamasfe.even-better-toml",
+        "-ms-python.autopep8",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "[markdown]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "file",
+        "files.exclude": {
+          "**/.pytest_cache": true,
+          "**/.ruff_cache": true,
+          "**/__pycache__": true
+        },
+        "files.insertFinalNewline": true,
+        "python.analysis.typeCheckingMode": "basic",
+        "python.testing.pytestArgs": [
+          "."
+        ],
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false
+      }
+    }
+  },
+  "dockerComposeFile": "docker-compose.yaml",
+  "features": {
+    "ghcr.io/devcontainers-contrib/features/act:1": {},
+    "ghcr.io/devcontainers-contrib/features/apt-packages": {
+      "packages": "age"
+    },
+    "ghcr.io/devcontainers-contrib/features/poetry:2": {},
+    "ghcr.io/devcontainers-contrib/features/sops:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "installTools": false,
+      "version": "3.12"
+    }
+  },
+  "forwardPorts": [
+    6379,
+    8000,
+    8001
+  ],
+  "name": "Courageous Comets \u2604\ufe0f",
+  "portsAttributes": {
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    },
+    "8000": {
+      "label": "MkDocs",
+      "onAutoForward": "notify"
+    },
+    "8001": {
+      "label": "RedisInsight",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/postcreate.sh",
+  "service": "dev",
+  "updateContentCommand": "bash .devcontainer/updatecontent.sh",
+  "workspaceFolder": "/workspace"
+}

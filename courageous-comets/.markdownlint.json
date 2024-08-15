@@ -1,0 +1,22 @@
+{
+  "MD013": {
+    "code_blocks": false,
+    "line_length": 110,
+    "tables": false
+  },
+  "MD024": {
+    "siblings_only": true
+  },
+  "MD033": {
+    "allowed_elements": [
+      "div",
+      "img",
+      "figcaption",
+      "figure",
+      "source",
+      "video"
+    ]
+  },
+  "MD046": false,
+  "default": true
+}
