@@ -1,0 +1,15 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: ./build/app/Dockerfile
+    env_file:
+      - ./config/app/.env
+    volumes:
+      - ./app:/app/app
+    restart: unless-stopped
+    stop_grace_period: 5s
+    develop:
+      watch:
+        - action: rebuild
+          path: requirements-dev.txt
